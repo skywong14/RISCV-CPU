@@ -1,0 +1,8 @@
+testspace/*
+testcase/*
+*.o
+*.vcd
+*.elf
+*.dump
+*.data
+.vscode/*
