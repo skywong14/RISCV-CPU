@@ -5,6 +5,7 @@
 // a non-pipelined module that decodes the instruction and sends the decoded information to the dispatcher
 // so it work without a clock signal
 
+// receive a 32-bit instruction and decode it, return the decoded information to IF
 
 module Decoder #(
     parameter LSB_WIDTH = 2,
@@ -56,7 +57,24 @@ module Decoder #(
     parameter orr = 7'd36,
     parameter andr = 7'd37
 ) (
-    
+    input wire[31 : 0] instruction,
+    output wire[6 : 0] opcode,
+    output wire[5 : 0] rs1, // wire[5] is valid signal
+    output wire[5 : 0] rs2, // wire[5] is valid signal
+    output wire[5 : 0] rd, // wire[5] is valid signal
+    output wire[31 : 0] imm,
+    output wire[] op_type
 );
+    assign opcode_part = instruction[6 : 0];
+    assign rs1_part = instruction[11 : 7];
+    assign rs2_part = instruction[19 : 15];
+    assign rd_part = instruction[24 : 20];
+    assign opcode = (opcode_part == 7'b0110111) ? lui :
+                    (opcode_part == 7'b0010111) ? auipc :
+                    (opcode_part == 7'b1101111) ? jal :
+                    (opcode_part == 7'b1100111) ? jalr :
+                    ;
+
+
 
 endmodule

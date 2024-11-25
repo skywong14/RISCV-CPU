@@ -13,7 +13,7 @@
 // 返回数据： IF_data_out_en <= 1, IF_data_out <= cache_data[index_block][index_addr] (if hit) or later (if miss)
 
 // 向memory_controller发送请求：MC_query_en <= 1, MC_query_addr <= query_addr[:BLOCK_WIDTH + 2]
-// 从memory_controller接收数据, if MC_data_en == 1: cache_data[index_block] <= MC_data, cache_valid[index_block] <= 1; data_out_en <= 1, data_out <= MC_data[index_addr] ; state <= IDLE
+// 从memory_controller接收数据, if MC_data_en == 1: cache_data[index_block] <= MC_data, cache_valid[index_block] <= 1; IF_data_out_en <= 1, IF_data_out <= MC_data[index_addr] ; state <= IDLE
 
 module ICache #(
     parameter CACHE_WIDTH = 2,
@@ -21,7 +21,7 @@ module ICache #(
 
     parameter CACHE_SIZE = 1 << CACHE_WIDTH,
     parameter BLOCK_SIZE = 1 << BLOCK_WIDTH,
-
+    
     parameter IDLE = 0,
     parameter BUSY = 1
 ) (
@@ -31,30 +31,40 @@ module ICache #(
     input wire rdy_in,
 
     // query to Memory Controller
-    output wire MC_query_en,
-    output wire [ : ] MC_query_addr,
+    output reg MC_query_en,
+    output reg [31 : 0] MC_query_addr, // MC_query_size == BLOCK_WIDTH
 
     // data(block information) from Memory Controller
     input wire MC_data_en,
-    input wire [ : ] MC_data
+    input wire [32 * BLOCK_SIZE - 1 : 0] MC_data,
 
     // output to IF
-    output wire data_out_en,
-    output wire [31 : 0] data_out, 
+    output reg IF_data_out_en,
+    output reg [31 : 0] IF_data_out
 );
+
+    reg state;
+    reg data_valid[CACHE_SIZE - 1 : 0];
+    reg[31 : 0] cache_data[CACHE_SIZE - 1 : 0][BLOCK_SIZE - 1 : 0];
+
+    integer i, j;
 
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            state <= IDLE;
+            for (i = 0; i < CACHE_SIZE; i = i + 1) begin
+                data_valid[i] <= 0;
+            end
         end
         else if (!rdy_in) begin
             // pause
+
         end
         else begin
             // run
+
         end
-
-
     end    
 
 
