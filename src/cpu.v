@@ -11,7 +11,7 @@ module cpu(
   output wire [31:0]          mem_a,			// address bus (only 17:0 is used)
   output wire                 mem_wr,			// write/read signal (1 for write)
 	
-	input  wire                 io_buffer_full, // 1 if uart buffer is full
+	input  wire                 io_buffer_full, // 1 if uart buffer is full, this signal will be sent to memory_controller
 	
 	output wire [31:0]			dbgreg_dout		// cpu register output (debugging demo)
 );
