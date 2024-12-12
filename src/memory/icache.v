@@ -20,7 +20,7 @@ module ICache #(
     parameter BLOCK_WIDTH = 2, // 4 words, 16 bytes in a block(i.e. 4 instructions per block), this parameter should not be modified
 
     parameter CACHE_SIZE = 1 << CACHE_WIDTH,
-    parameter BLOCK_SIZE = 1 << BLOCK_WIDTH, // 4
+    parameter BLOCK_SIZE = 1 << BLOCK_WIDTH,
     
     parameter IDLE = 0,
     parameter WAITING = 1
