@@ -16,14 +16,14 @@
 // 从memory_controller接收数据, if MC_data_en == 1: cache_data[index_block] <= MC_data, cache_valid[index_block] <= 1; IF_data_out_en <= 1, IF_data_out <= MC_data[index_addr] ; state <= IDLE
 
 module ICache #(
-    parameter CACHE_WIDTH = 2,
-    parameter BLOCK_WIDTH = 2,
+    parameter CACHE_WIDTH = 3, // 8 blocks in cache
+    parameter BLOCK_WIDTH = 2, // 4 words, 16 bytes in a block(i.e. 4 instructions per block), this parameter should not be modified
 
     parameter CACHE_SIZE = 1 << CACHE_WIDTH,
-    parameter BLOCK_SIZE = 1 << BLOCK_WIDTH,
+    parameter BLOCK_SIZE = 1 << BLOCK_WIDTH, // 4
     
     parameter IDLE = 0,
-    parameter BUSY = 1
+    parameter WAITING = 1
 ) (
     // cpu
     input wire clk_in,
@@ -36,18 +36,30 @@ module ICache #(
 
     // data(block information) from Memory Controller
     input wire MC_data_en,
-    input wire [32 * BLOCK_SIZE - 1 : 0] MC_data,
+    input wire [32 * BLOCK_SIZE - 1 : 0] MC_data, // icache_block_data
+
+    // query from IF
+    input wire IF_query_en,
+    input wire [31 : 0] IF_query_addr,
 
     // output to IF
-    output reg IF_data_out_en,
-    output reg [31 : 0] IF_data_out
+    output reg IF_dout_en,
+    output reg [31 : 0] IF_dout
 );
 
     reg state;
     reg data_valid[CACHE_SIZE - 1 : 0];
-    reg[31 : 0] cache_data[CACHE_SIZE - 1 : 0][BLOCK_SIZE - 1 : 0];
+    reg [31 : 0] cache_block_addr[CACHE_SIZE - 1 : 0];
+    reg [32 * BLOCK_SIZE - 1 : 0] cache_block[CACHE_SIZE - 1 : 0];
 
     integer i, j;
+
+    wire [CACHE_SIZE - 1 : 0] block_index;
+    wire [BLOCK_WIDTH + 1 : 0] entry_index;
+    wire [31 : 0] block_head_addr;
+    assign block_index = IF_query_addr[CACHE_WIDTH + BLOCK_WIDTH + 1 : BLOCK_WIDTH + 2];
+    assign entry_index = IF_query_addr[BLOCK_WIDTH + 1 : 2];
+    assign block_head_addr = {IF_query_addr[CACHE_WIDTH + BLOCK_WIDTH + 1 : 2], 2'b00};
 
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -56,14 +68,56 @@ module ICache #(
             for (i = 0; i < CACHE_SIZE; i = i + 1) begin
                 data_valid[i] <= 0;
             end
+            IF_dout_en <= 0;
+            IF_dout <= 0;
         end
         else if (!rdy_in) begin
             // pause
-
         end
         else begin
             // run
-
+            if (state == IDLE) begin
+                // handle query from IF
+                if (IF_query_en) begin
+                    if (data_valid[block_index] && cache_block_addr[block_index] == block_head_addr) begin
+                        // hit
+                        IF_dout_en <= 1;
+                        case (entry_index)
+                            0: IF_dout <= cache_block[block_index][31 : 0];
+                            1: IF_dout <= cache_block[block_index][63 : 32];
+                            2: IF_dout <= cache_block[block_index][95 : 64];
+                            3: IF_dout <= cache_block[block_index][127 : 96];
+                        endcase
+                    end
+                    else begin
+                        // miss
+                        IF_dout_en <= 0;
+                        state <= WAITING;
+                        MC_query_en <= 1;
+                        MC_query_addr <= IF_query_addr[CACHE_WIDTH + BLOCK_WIDTH + 1 : 2];
+                    end
+                end
+            end 
+            else if (state == WAITING) begin
+                // waiting data from MC
+                if (MC_data_en) begin
+                    // update cache
+                    state <= IDLE;
+                    data_valid[block_index] <= 1;
+                    cache_block_addr[block_index] <= MC_query_addr;
+                    cache_block[block_index] <= MC_data;
+                    IF_dout_en <= 1;
+                    case (entry_index)
+                        0: IF_dout <= MC_data[31 : 0];
+                        1: IF_dout <= MC_data[63 : 32];
+                        2: IF_dout <= MC_data[95 : 64];
+                        3: IF_dout <= MC_data[127 : 96];
+                    endcase
+                end
+                else begin
+                    MC_query_en <= 0;
+                end
+            end
         end
     end    
 
