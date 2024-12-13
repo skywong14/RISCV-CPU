@@ -63,7 +63,7 @@ module Decoder #(
     output wire[5 : 0] rs2, // wire[5] is valid signal
     output wire[5 : 0] rd, // wire[5] is valid signal
     output wire[31 : 0] imm,
-    output wire[] op_type
+    output wire[6 : 0] op_type
 );
     assign opcode_part = instruction[6 : 0];
     assign rs1_part = instruction[11 : 7];
