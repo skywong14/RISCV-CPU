@@ -63,10 +63,13 @@ module RoB #(
     // with Dispatcher
     input wire new_entry_en,
     input wire [6 : 0] new_entry_opcode,
-    input wire [31 : 0] new_entry_rd,
+    input wire [4 : 0] new_entry_rd,
     input wire [31 : 0] new_entry_pc,
     input wire [31 : 0] new_entry_next_pc,
     input wire new_entry_predict_result,
+
+    input wire already_ready,
+    input wire [31 : 0] ready_data,
     
     // with CDB
     input wire CDB_update_en,
@@ -237,7 +240,12 @@ module RoB #(
                             flush_signal <= 1;
                             // tell IF to jump to correct_next_pc
                             branch_fail_en <= 1;
-                            correct_next_pc <= next_pc[head_ptr];
+                            if (opcode[head_ptr] == beq || opcode[head_ptr] == bne) begin
+                                correct_next_pc <= next_pc[head_ptr];
+                            end
+                            else begin
+                                correct_next_pc <= pc[head_ptr] + 4;
+                            end
                         end 
                         // branch_predictor update
                         branch_predictor_en <= 1;
