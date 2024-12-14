@@ -26,7 +26,7 @@ module LSB #(
     parameter NON_DEP = 1 << RoB_WIDTH, // NON_DEP signal
 
     parameter NORMAL = 0,
-    parameter INTERRUPT = 1,
+    parameter WAITING_RESULT = 1,
 
     // L type
     parameter lb = 7'd11,
@@ -90,6 +90,7 @@ module LSB #(
     reg [31 : 0] Vj[LSB_SIZE - 1 : 0], Vk[LSB_SIZE - 1 : 0];
     reg [RoB_WIDTH : 0] Qj[LSB_SIZE - 1 : 0], Qk[LSB_SIZE - 1 : 0]; // reg[RoB_WIDTH] is valid signal
     reg [RoB_WIDTH - 1 : 0] RoBEntry[LSB_SIZE - 1 : 0];
+    reg [31 : 0] imm[LSB_SIZE - 1 : 0];
     reg isBusy[LSB_SIZE - 1 : 0];
     reg extend_type[LSB_SIZE - 1 : 0]; // 0: sign extend, 1: zero extend
     wire isReady[LSB_SIZE - 1 : 0];
@@ -127,73 +128,140 @@ module LSB #(
                 Qk[i] <= NON_DEP;
                 RoBEntry[i] <= 0;
                 isBusy[i] <= 0;
+                imm[i] <= 0;
             end
         end
         else if (!rdy_in) begin
             // pause
         end
+        else if (flush_signal) begin
+            // flush
+            state <= NORMAL;
+            head_ptr <= 0;
+            tail_ptr <= 0;
+            mem_query_en <= 0;
+            mem_query_addr <= 0;
+            RoB_write_en <= 0;
+            lstCommittedWrite <= NON_DEP;
+            for (i = 0; i < LSB_SIZE; i = i + 1) begin
+                op_type[i] <= 0;
+                data_width[i] <= 0;
+                Vj[i] <= 0;
+                Vk[i] <= 0;
+                Qj[i] <= NON_DEP;
+                Qk[i] <= NON_DEP;
+                RoBEntry[i] <= 0;
+                isBusy[i] <= 0;
+                imm[i] <= 0;
+            end
+        end
         else begin
-            // run
+            // get a new entry
+            if (new_entry_en && !isFull) begin
+                isBusy[tail_ptr] <= 1;
+                tail_ptr <= (tail_ptr + 1) % LSB_SIZE;
+                // get values from dispatcher
+                Vj[tail_ptr] <= new_entry_Vj;
+                Vk[tail_ptr] <= new_entry_Vk;
+                Qj[tail_ptr] <= new_entry_Qj;
+                Qk[tail_ptr] <= new_entry_Qk;
+                imm[tail_ptr] <= new_entry_imm;
+                RoBEntry[tail_ptr] <= new_entry_RoBIndex;
+                case (new_entry_opcode)
+                     lb : begin
+                        op_type[tail_ptr] <= 0;
+                        data_width[tail_ptr] <= 0;
+                        extend_type[tail_ptr] <= 0;
+                    end
+                    lh : begin
+                        op_type[tail_ptr] <= 0;
+                        data_width[tail_ptr] <= 1;
+                        extend_type[tail_ptr] <= 0;
+                    end
+                    lw : begin
+                        op_type[tail_ptr] <= 0;
+                        data_width[tail_ptr] <= 2;
+                        extend_type[tail_ptr] <= 0;
+                    end
+                    lbu : begin
+                        op_type[tail_ptr] <= 0;
+                        data_width[tail_ptr] <= 2;
+                        extend_type[tail_ptr] <= 1;
+                    end
+                    lhu : begin
+                        op_type[tail_ptr] <= 0;
+                        data_width[tail_ptr] <= 1;
+                        extend_type[tail_ptr] <= 1;
+                    end
+                    sb : begin
+                        op_type[tail_ptr] <= 1;
+                        data_width[tail_ptr] <= 0;
+                    end
+                    sh : begin
+                        op_type[tail_ptr] <= 1;
+                        data_width[tail_ptr] <= 1;
+                    end
+                    sw : begin
+                        op_type[tail_ptr] <= 1;
+                        data_width[tail_ptr] <= 2;
+                    end
+                endcase
+            end
+
             if (state == NORMAL) begin
-                // get a new entry
-                if (new_entry_en && !isFull) begin
-                    isBusy[tail_ptr] <= 1;
-                    tail_ptr <= (tail_ptr + 1) % LSB_SIZE;
-                    // get values from dispatcher
-                    Vj[tail_ptr] <= new_entry_Vj;
-                    Vk[tail_ptr] <= new_entry_Vk;
-                    Qj[tail_ptr] <= new_entry_Qj;
-                    Qk[tail_ptr] <= new_entry_Qk;
-                    RoBEntry[tail_ptr] <= new_entry_RoBIndex;
-                    case (new_entry_opcode)
-                        lb : begin
-                            op_type[tail_ptr] <= 0;
-                            data_width[tail_ptr] <= 0;
-                            extend_type[tail_ptr] <= 0;
-                        end
-                        lh : begin
-                            op_type[tail_ptr] <= 0;
-                            data_width[tail_ptr] <= 1;
-                            extend_type[tail_ptr] <= 0;
-                        end
-                        lw : begin
-                            op_type[tail_ptr] <= 0;
-                            data_width[tail_ptr] <= 2;
-                            extend_type[tail_ptr] <= 0;
-                        end
-                        lbu : begin
-                            op_type[tail_ptr] <= 0;
-                            data_width[tail_ptr] <= 2;
-                            extend_type[tail_ptr] <= 1;
-                        end
-                        lhu : begin
-                            op_type[tail_ptr] <= 0;
-                            data_width[tail_ptr] <= 1;
-                            extend_type[tail_ptr] <= 1;
-                        end
-                        sb : begin
-                            op_type[tail_ptr] <= 1;
-                            data_width[tail_ptr] <= 0;
-                        end
-                        sh : begin
-                            op_type[tail_ptr] <= 1;
-                            data_width[tail_ptr] <= 1;
-                        end
-                        sw : begin
-                            op_type[tail_ptr] <= 1;
-                            data_width[tail_ptr] <= 2;
-                        end
-                    endcase
-                end
-                
-                // READ before the first WRITE
+                // reset RoB_write signal
+                RoB_write_en <= 0;
+                RoB_write_index <= 0;
+                RoB_write_data <= 0;
+            end
+
+            if (state == NORMAL) begin
+                // try to commit
                 if (isBusy[head_ptr] && isReady[head_ptr] && op_type[head_ptr] == 0) begin
-
+                    // LOAD before the first STORE
+                    // load: load [rs1 + imm] to #RoBIndex(rd)
+                    state <= WAITING_RESULT;
+                    mem_query_en <= 1;
+                    mem_query_type <= 0;
+                    mem_query_addr <= Vj[head_ptr] + imm[head_ptr];
+                    mem_data_width <= data_width[head_ptr];
                 end
-
-                // WRITE at head
-                if (isBusy[head_ptr] && isReady[head_ptr] && op_type[head_ptr] == 1 && RoB_headIndex == RoBEntry[head_ptr]) begin
-                    
+                else if (isBusy[head_ptr] && isReady[head_ptr] && op_type[head_ptr] == 1 && RoB_headIndex == RoBEntry[head_ptr]) begin
+                    // STORE at head
+                    // store：store rs2 at [rs1 + imm]
+                    state <= WAITING_RESULT;
+                    mem_query_en <= 1;
+                    mem_query_type <= 1;
+                    mem_query_addr <= Vj[head_ptr] + imm[head_ptr];
+                    mem_data_width <= data_width[head_ptr];
+                    mem_query_data <= Vk[head_ptr];
+                end
+            end
+            else if (state == WAITING_RESULT) begin
+                // wait for the commit result
+                if (mem_reply_en) begin
+                    if (mem_query_type == 0) begin
+                        // READ
+                        RoB_write_en <= 1;
+                        RoB_write_index <= RoBEntry[head_ptr];
+                        RoB_write_data <= mem_reply_data;
+                    end
+                    else begin
+                        // WRITE
+                        // maybe no need?
+                        RoB_write_en <= 1;
+                        lstCommittedWrite <= RoBEntry[head_ptr];
+                        RoB_write_index <= RoBEntry[head_ptr];
+                        RoB_write_data <= 0;
+                    end
+                    isBusy[head_ptr] <= 0;
+                    head_ptr <= (head_ptr + 1) % LSB_SIZE;
+                    state <= NORMAL;
+                    mem_query_en <= 0;
+                    mem_query_addr <= 0;
+                    mem_query_data <= 0;
+                    mem_query_type <= 0;
+                    mem_data_width <= 0;
                 end
             end
         end
