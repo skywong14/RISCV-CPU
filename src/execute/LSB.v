@@ -57,12 +57,12 @@ module LSB #(
     input wire new_entry_en,
     input wire [RoB_WIDTH - 1 : 0] new_entry_RoBIndex,
     input wire [6 : 0] new_entry_opcode,
-    input wire [31 : 0] new_entry_imm,
     input wire [31 : 0] new_entry_Vj,
     input wire [31 : 0] new_entry_Vk,
     input wire [RoB_WIDTH : 0] new_entry_Qj,
     input wire [RoB_WIDTH : 0] new_entry_Qk,
-
+    input wire [31 : 0] new_entry_imm,
+    input wire [31 : 0] new_entry_pc,
 
     // with CDB
     input wire RoB_update_en,

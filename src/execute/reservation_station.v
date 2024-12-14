@@ -6,9 +6,9 @@
 
 
 module Reservation_Station #(
-    parameter RS_WIDTH = 3,
+    parameter RS_WIDTH = 2,
     parameter RS_SIZE = 1 << RS_WIDTH,
-    parameter RoB_WIDTH = 3,
+    parameter RoB_WIDTH = 2,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
 
 
@@ -51,13 +51,13 @@ module Reservation_Station #(
 
     // with Dispatcher
     input wire new_entry_en,
+    input wire [RoB_WIDTH - 1 : 0] new_entry_robEntry,
     input wire [6 : 0] new_entry_opcode,
     input wire [31 : 0] new_entry_Vj,
     input wire [31 : 0] new_entry_Vk,
     input wire [RoB_WIDTH : 0] new_entry_Qj,
     input wire [RoB_WIDTH : 0] new_entry_Qk,
     input wire [31 : 0] new_entry_imm,
-    input wire [RoB_WIDTH - 1 : 0] new_entry_robEntry,
     input wire [31 : 0] new_entry_pc,
 
     // with CDB

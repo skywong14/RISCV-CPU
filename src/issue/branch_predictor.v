@@ -20,7 +20,6 @@ module branch_predictor #(
     input wire update_result, // 0: not jump, 1: jump
 
     // with IF
-    input wire query_en,
     input wire [31 : 0] query_PC,
     output wire result_out // 0: not jump, 1: jump
 );
