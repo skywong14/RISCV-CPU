@@ -70,6 +70,7 @@ module ICache #(
             end
             IF_dout_en <= 0;
             IF_dout <= 0;
+            MC_query_en <= 0;
         end
         else if (!rdy_in) begin
             // pause
@@ -78,6 +79,7 @@ module ICache #(
             // run
             if (state == IDLE) begin
                 // handle query from IF
+                IF_dout_en <= 0;
                 if (IF_query_en) begin
                     if (data_valid[block_index] && cache_block_addr[block_index] == block_head_addr) begin
                         // hit

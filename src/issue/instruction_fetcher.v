@@ -113,6 +113,9 @@ module Instruction_Fetcher #(
                 state <= ISSUING;
                 icache_query_en <= 0;
             end
+            else begin
+                icache_query_en <= 0;
+            end
         end
         else if (state == IDLE) begin
             // pc is ready
@@ -156,9 +159,9 @@ module Instruction_Fetcher #(
             new_rd <= rd;
             new_imm <= imm;
             new_predict_result <= predict_result;
+        end else begin
+            new_instruction_en <= 0;
         end
-    end    
-
-
+    end
 
 endmodule

@@ -125,11 +125,21 @@ module Dispatcher #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            RF_newEntry_en <= 0;
+            RS_newEntry_en <= 0;
+            LSB_newEntry_en <= 0;
+            RoB_newEntry_en <= 0;
+            RoB_already_ready <= 0;
         end
         else if (!rdy_in) begin
             // pause
         end if (flush_signal) begin
             // flush
+            RF_newEntry_en <= 0;
+            RS_newEntry_en <= 0;
+            LSB_newEntry_en <= 0;
+            RoB_newEntry_en <= 0;
+            RoB_already_ready <= 0;
         end
         else begin
             // run

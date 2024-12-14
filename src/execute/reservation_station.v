@@ -113,6 +113,7 @@ module Reservation_Station #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            RS_update_en <= 0;
             for (i = 0; i < RS_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
                 opcode[i] <= 0;
@@ -129,6 +130,7 @@ module Reservation_Station #(
             // pause
         end if (flush_signal) begin
             // flush
+            RS_update_en <= 0;
             for (i = 0; i < RS_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
                 opcode[i] <= 0;
@@ -143,6 +145,7 @@ module Reservation_Station #(
         end
         else begin
             // run
+            RS_update_en <= 0;
             if (!isFull && new_entry_en) begin
                 // get new entry
                 opcode[idle_pos] <= new_entry_opcode;

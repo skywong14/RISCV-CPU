@@ -69,6 +69,7 @@ module Memory_Controller #(
             LSB_result_data <= 0;
             uart_state <= 0;
             ram_addr_in <= 0;
+            icache_block_en <= 0;
         end
         else if (!rdy_in) begin
             // pause
@@ -76,6 +77,8 @@ module Memory_Controller #(
         else begin
             // run
             if (state == IDLE) begin
+                LSB_result_en <= 0;
+                icache_block_en <= 0;
                 if (LSB_query_en && (!icache_query_en || last_module == 1)) begin
                     // work on query from LSB
                     if (LSB_query_type) begin
@@ -167,7 +170,6 @@ module Memory_Controller #(
                 if (r_cur == r_length) begin
                     state <= IDLE;
                     icache_block_en <= 1;
-                    ram_addr_in <= 0;
                     ram_addr_in <= 0;
                 end 
                 else begin

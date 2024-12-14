@@ -154,7 +154,8 @@ module RoB #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end
+        else if (flush_signal) begin
             // flush
             head_ptr <= 0;
             tail_ptr <= 0;
@@ -214,7 +215,7 @@ module RoB #(
                         opType[tail_ptr] <= ERROR;
                     end
                 endcase
-                tail_ptr <= tail_ptr + 1;
+                tail_ptr <= (tail_ptr + 1) % RoB_SIZE;
             end
 
             // monitor CDB, update data
