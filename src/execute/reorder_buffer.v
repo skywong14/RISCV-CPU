@@ -1,11 +1,5 @@
 // module reorder_buffer.v
 
-// when predict goes wrong, send a high flush_signal to the CPU(CDB), and reset itself
-
-// FLUSH (when predict goes wrong, or sys_rst is high): clear current instructions in rob
-
-
-
 module RoB #(
     parameter RoB_WIDTH = 3,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
@@ -54,42 +48,70 @@ module RoB #(
     parameter orr = 7'd36,
     parameter andr = 7'd37,
 
-    parameter REGISTER = 0,
-    parameter BRANCH = 1,
-    parameter JALR = 2,
-    parameter STORE = 3,
-    parameter EXIT = 4
+    parameter EMPTY = 0,
+    parameter REGISTER = 1,
+    parameter BRANCH = 2,
+    parameter JALR = 3,
+    parameter STORE = 4,
+    parameter ERROR = 5
 ) (
     // cpu
     input wire clk_in,
     input wire rst_in,
     input wire rdy_in,
 
+    // with Dispatcher
+    input wire new_entry_en,
+    input wire [6 : 0] new_entry_opcode,
+    input wire [31 : 0] new_entry_rd,
+    input wire [31 : 0] new_entry_pc,
+    input wire [31 : 0] new_entry_next_pc,
+    input wire new_entry_predict_result,
+    
+    // with CDB
+    input wire CDB_update_en,
+    input wire [RoB_WIDTH - 1 : 0] CDB_update_index,
+    input wire [31 : 0] CDB_update_data,
 
+    // notify RF
+    output reg RF_update_en,
+    output reg [5 : 0] RF_update_reg,
+    output reg [RoB_WIDTH - 1 : 0] RF_update_index,
+    output reg [31 : 0] RF_update_data,
+
+    // notify IF when jalr / branch goes wrong
+    output reg jalr_feedback_en,
+    output reg [31 : 0] jalr_feedback_data,
+
+    output reg branch_fail_en,
+    output reg [31 : 0] correct_next_pc,
+
+    // notify branch predictor
+    output reg branch_predictor_en,
+    output reg [31 : 0] branch_predictor_pc,
+    output reg branch_predictor_result,
 
     // self state
     output wire isFull,
     output wire [RoB_WIDTH - 1 : 0] new_entry_index, // the index of the new entry in RoB
-    output reg flush_signal, // high when predict goes wrong
-    output reg falt_sign
+    output reg flush_signal // high when predict goes wrong
 );
 
     reg [RoB_WIDTH - 1 : 0] head_ptr, tail_ptr;
 
-// Entry: RoB_index, isBusy, isReady, opType, rd, pc, next_pc, predict_result(1 or 0), data, extra_data
+// Entry: isBusy, isReady, opcode, rd, pc, next_pc, predict_result(1 or 0), data, extra_data, 
 /* opType:  
  * REGISTER (save data to rd)
  * BRANCH (data equals 0: not jump/ 1: jump, if predict_result != data, then FLUSH)
- * JALR (save next_pc to rd)
+ * JALR (rd <= pc + 4, pc <= (Vj + imm) & ~1, i.e. data)
  * STORE (save data to memory, addr is saved in rd, extra_data is used to store length)
- * EXIT todo
  * JAL will be transformed to REGISTER in Dispatcher
  */
-    reg [RoB_WIDTH - 1 : 0] RoB_index[RoB_SIZE - 1 : 0];
     reg isBusy[RoB_SIZE - 1 : 0];
     reg isReady[RoB_SIZE - 1 : 0];
     reg [2 : 0] opType[RoB_SIZE - 1 : 0];
-    reg [31 : 0] rd[RoB_SIZE - 1 : 0]; // also used as addr
+    reg [6 : 0] opcode[RoB_SIZE - 1 : 0];
+    reg [31 : 0] rd[RoB_SIZE - 1 : 0]; // also used as addr?
     reg [31 : 0] pc[RoB_SIZE - 1 : 0];
     reg [31 : 0] next_pc[RoB_SIZE - 1 : 0];
     reg predict_result[RoB_SIZE - 1 : 0];
@@ -107,68 +129,141 @@ module RoB #(
             // reset
             head_ptr <= 0;
             tail_ptr <= 0;
+
             flush_signal <= 0;
-            falt_sign <= 0;
+            RF_update_en <= 0;
+            jalr_feedback_en <= 0;
+            branch_fail_en <= 0;
+            branch_predictor_en <= 0;
+
             for (i = 0; i < RoB_SIZE; i = i + 1) begin
-                RoB_index[i] <= 0;
                 isBusy[i] <= 0;
                 isReady[i] <= 0;
-                opType[i] <= 0;
+                opType[i] <= EMPTY;
                 rd[i] <= 0;
                 pc[i] <= 0;
                 next_pc[i] <= 0;
                 predict_result[i] <= 0;
                 data[i] <= 0;
                 extra_data[i] <= 0;
+                opcode[i] <= 0;
             end
         end
         else if (!rdy_in) begin
             // pause
+        end if (flush_signal) begin
+            // flush
+            head_ptr <= 0;
+            tail_ptr <= 0;
 
+            flush_signal <= 0;
+            RF_update_en <= 0;
+            jalr_feedback_en <= 0;
+            branch_fail_en <= 0;
+            branch_predictor_en <= 0;
+
+            for (i = 0; i < RoB_SIZE; i = i + 1) begin
+                isBusy[i] <= 0;
+                isReady[i] <= 0;
+                opType[i] <= EMPTY;
+                rd[i] <= 0;
+                pc[i] <= 0;
+                next_pc[i] <= 0;
+                predict_result[i] <= 0;
+                data[i] <= 0;
+                extra_data[i] <= 0;
+                opcode[i] <= 0;
+            end
         end
         else begin
             // run
+            
+            // reset enable signals
+            flush_signal <= 0;
+            RF_update_en <= 0;
+            jalr_feedback_en <= 0;
+            branch_fail_en <= 0;
+            branch_predictor_en <= 0;
+
             // get new entry
+            if (!isFull && new_entry_en) begin
+                isBusy[tail_ptr] <= 1;
+                isReady[tail_ptr] <= 0;
+                rd[tail_ptr] <= new_entry_rd;
+                pc[tail_ptr] <= new_entry_pc;
+                next_pc[tail_ptr] <= new_entry_next_pc;
+                predict_result[tail_ptr] <= new_entry_predict_result;
+                opcode[tail_ptr] <= new_entry_opcode;
+                case (new_entry_opcode)
+                    jalr : begin
+                        opType[tail_ptr] <= JALR;
+                    end
+                    lui, auipc, jal, lb, lh, lw, lbu, lhu, addi, slti, sltiu, xori, ori, andi, slli, srli, srai, add, sub, sll, slt, sltu, xorr, srl, sra, orr, andr: begin
+                        opType[tail_ptr] <= REGISTER;
+                    end
+                    beq, bne, blt, bge, bltu, bgeu: begin
+                        opType[tail_ptr] <= BRANCH;
+                    end
+                    sb, sh, sw: begin
+                        opType[tail_ptr] <= STORE;
+                    end
+                    default: begin
+                        opType[tail_ptr] <= ERROR;
+                    end
+                endcase
+                tail_ptr <= tail_ptr + 1;
+            end
 
-
-            // update RoB
-
+            // monitor CDB, update data
+            if (CDB_update_en) begin
+                isReady[CDB_update_index] <= 1;
+                data[CDB_update_index] <= CDB_update_data;
+            end
 
             // commit head entry
             if (isReady[head_ptr]) begin
                 // data is ready
                 case (opType[head_ptr])
                     REGISTER: begin
-                        // write back to RF
-
+                        // write data[head_ptr] to rd[head_ptr]
+                        RF_update_en <= 1;
+                        RF_update_reg <= rd[head_ptr];
+                        RF_update_index <= head_ptr;
+                        RF_update_data <= data[head_ptr];
                     end
                     BRANCH: begin
-                        // branch predict success
-                        
-                        // branch predict fail
-
+                        if (data[head_ptr] != predict_result[head_ptr]) begin
+                            // FLUSH
+                            flush_signal <= 1;
+                            // tell IF to jump to correct_next_pc
+                            branch_fail_en <= 1;
+                            correct_next_pc <= next_pc[head_ptr];
+                        end 
+                        // branch_predictor update
+                        branch_predictor_en <= 1;
+                        branch_predictor_pc <= pc[head_ptr];
+                        branch_predictor_result <= data[head_ptr];
                     end
                     JALR: begin
                         // write back to RF
-
+                        RF_update_en <= 1;
+                        RF_update_reg <= rd[head_ptr];
+                        RF_update_index <= head_ptr;
+                        RF_update_data <= pc[head_ptr] + 4;
                         // jump to next_pc
-
-                        // send signal to IF
-
+                        jalr_feedback_en <= 1;
+                        jalr_feedback_data <= data[head_ptr]; // next_pc
                     end
                     STORE: begin
-                        // if not finished, ask LSB to write, wait for response
-
-                        // if done, pop entry
-
+                        // has been committed by LSB
                     end
                     default: begin
-                        // EXIT
+                        // something goes wrong
                     end
                 endcase
                 isBusy[head_ptr] <= 0;
-                head_ptr <= head_ptr + 1;
-            end    
+                head_ptr <= (head_ptr + 1) % RoB_SIZE;
+            end
         end
     end
 
