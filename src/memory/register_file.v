@@ -21,23 +21,24 @@ module RF #(
     // FLUSH from RoB
     input wire flush_signal,
 
-    // notify by RoB
+    // notified by RoB
     input wire RoB_update_en,
     input wire[5 : 0] RoB_update_reg, 
-    input wire [RoB_WIDTH - 1 : 0] RoB_update_index, // RoBEntry index
-    input wire [31 : 0] RoB_update_data, // update value
+    input wire [RoB_WIDTH - 1 : 0] RoB_update_index,
+    input wire [31 : 0] RoB_update_data,
 
     // with Dispatcher
-    input wire query_en,
-    input wire [RoB_WIDTH - 1 : 0] query_index, // RoBEntry index
-    output wire [5 : 0] rs1, rs2, rd, // wire[5] is valid signal
+    input wire [5 : 0] rs1, rs2, // wire[5] is valid signal
     output wire [RoB_WIDTH : 0] Qj, Qk, // wire[RoB_WIDTH] is valid signal
-    output wire [31 : 0] Vj, Vk
+    output wire [31 : 0] Vj, Vk,
+    
+    input new_entry_en,
+    input [RoB_WIDTH - 1 : 0] new_entry_robEntry,
+    input [4 : 0] occupied_rd
 );
 
     reg [31 : 0] registers[REG_SIZE - 1:0]; // value
     reg [RoB_WIDTH : 0] dependency[REG_SIZE - 1:0]; // reg[RoB_WIDTH] is valid signal
-
 
     // ATTENTION: if RoB notify RF to update and query at the same time, the update should be done first
 
@@ -72,7 +73,6 @@ module RF #(
         else begin
             // run
             // if RoB_update_en && dependency[RoB_update_index] == RoB_update_index, update registers[RoB_update_index] and dependency[RoB_update_index]
-            // ATTENTION: value should be updated
             if (RoB_update_en && RoB_update_reg != NON_DEP && RoB_update_reg != 6'b000000) begin
                 registers[RoB_update_index] <= RoB_update_data;
                 if (dependency[RoB_update_index] == RoB_update_index) begin
@@ -80,9 +80,9 @@ module RF #(
                 end
             end
 
-            // if rd != NON_DEP, update dependency[rd] <= query_index
-            if (query_en && rd != NON_DEP && rd != 6'b000000) begin
-                dependency[rd] <= query_index;
+            // new entry, occcupy rd
+            if (new_entry_en && occupied_rd != 5'b000000) begin
+                dependency[occupied_rd] <= new_entry_robEntry;
             end
         end
 
