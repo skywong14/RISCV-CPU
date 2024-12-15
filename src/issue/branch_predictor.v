@@ -5,7 +5,7 @@
 // 10: Weakly Taken
 // 11: Strongly Taken
 
-module branch_predictor #(
+module Branch_Predictor #(
     parameter WIDTH = 2,
     parameter SIZE = 1 << WIDTH
 ) (

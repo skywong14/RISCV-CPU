@@ -5,11 +5,6 @@
 // [RoBIndex, Value]:
 // from: LSB, RS
 // to:   LSB, RS, RoB
-
-// [flush_signal]:
-// from: RoB (when commit a branch instruction)
-// to:   LSB, RS, Dispatcher, IF
-
 module CDB #(
     parameter RoB_WIDTH = 3
 ) (
