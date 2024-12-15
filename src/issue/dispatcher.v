@@ -5,7 +5,7 @@ module Dispatcher #(
     parameter RS_WIDTH = 2,
     parameter RoB_WIDTH = 3,
 
-    parameter NON_DEP = 1 << 5,
+    parameter NON_DEP = 1 << RoB_WIDTH,
 
     parameter lui = 7'd1,      // Load Upper Immediate: result = imm << 12
     parameter auipc = 7'd2,    // Add Upper Immediate to PC: result = PC + (imm << 12)
@@ -94,7 +94,7 @@ module Dispatcher #(
     // with RoB
     input wire RoB_isFull,
     input wire [RoB_WIDTH - 1 : 0] RoB_newEntryIndex,
-    input wire flush_signal,
+    input wire RoB_flush_signal,
 
     output reg RoB_newEntry_en,
     output reg [6 : 0] RoB_opcode,
@@ -105,7 +105,6 @@ module Dispatcher #(
 
     output reg RoB_already_ready,
     output reg [31 : 0] RoB_ready_data,
-
 
     // with RF
     output wire [5 : 0] RF_rs1,
@@ -133,7 +132,7 @@ module Dispatcher #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end if (RoB_flush_signal) begin
             // flush
             RF_newEntry_en <= 0;
             RS_newEntry_en <= 0;
@@ -246,7 +245,7 @@ module Dispatcher #(
 
                         RoB_newEntry_en <= 1;
                         RoB_opcode <= new_opcode;
-                        RoB_rd <= NON_DEP;
+                        RoB_rd <= 0; // reg 0 means NON_DEP
                         RoB_pc <= new_pc;
                         RoB_next_pc <= new_pc + new_imm;
                         RoB_predict_result <= new_predict_result;
@@ -298,7 +297,7 @@ module Dispatcher #(
 
                         RoB_newEntry_en <= 1;
                         RoB_opcode <= new_opcode;
-                        RoB_rd <= NON_DEP;
+                        RoB_rd <= 0;
                         RoB_pc <= new_pc;
                         RoB_next_pc <= new_pc + 4;
                         RoB_predict_result <= 0;

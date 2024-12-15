@@ -71,6 +71,7 @@ wire branch_predictor_result_out;
 
 // output by Dispatcher
 wire Dispatcher_new_instruction_able;
+
 wire Dispatcher_RS_new_Entry_en;
 wire [RoB_WIDTH - 1 : 0] Dispatcher_RS_robEntry;
 wire [6 : 0] Dispatcher_RS_opcode;
@@ -80,6 +81,17 @@ wire [RoB_WIDTH : 0] Dispatcher_RS_Qj;
 wire [RoB_WIDTH : 0] Dispatcher_RS_Qk;
 wire [31 : 0] Dispatcher_RS_imm;
 wire [31 : 0] Dispatcher_RS_pc;
+
+wire Dispatcher_LSB_newEntry_en;
+wire [RoB_WIDTH - 1 : 0] Dispatcher_LSB_RoBIndex;
+wire [6 : 0] Dispatcher_LSB_opcode;
+wire [31 : 0] Dispatcher_LSB_Vj;
+wire [31 : 0] Dispatcher_LSB_Vk;
+wire [RoB_WIDTH : 0] Dispatcher_LSB_Qj;
+wire [RoB_WIDTH : 0] Dispatcher_LSB_Qk;
+wire [31 : 0] Dispatcher_LSB_imm;
+wire [31 : 0] Dispatcher_LSB_pc;
+
 wire Dispatcher_RoB_newEntry_en;
 wire [6 : 0] Dispatcher_RoB_opcode;
 wire [4 : 0] Dispatcher_RoB_rd;
@@ -88,6 +100,7 @@ wire [31 : 0] Dispatcher_RoB_next_pc;
 wire Dispatcher_RoB_predict_result;
 wire Dispatcher_RoB_already_ready;
 wire [31 : 0] Dispatcher_RoB_ready_data;
+
 wire [5 : 0] Dispatcher_RF_rs1;
 wire [5 : 0] Dispatcher_RF_rs2;
 wire Dispatcher_RF_newEntry_en;
@@ -105,7 +118,7 @@ wire [4 : 0] IF_new_rs2;
 wire [4 : 0] IF_new_rd;
 wire [31 : 0] IF_new_imm;
 wire IF_new_predict_result;
-wire IF_predict_query_pc;
+wire [31 : 0] IF_predict_query_pc;
 
 // output by icache
 wire icache_MC_query_en;
@@ -182,6 +195,7 @@ Dispatcher Dispatcher_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
+
   .new_instruction_en(IF_new_instruction_en),
   .new_pc(IF_new_pc),
   .new_opcode(IF_new_opcode),
@@ -191,6 +205,7 @@ Dispatcher Dispatcher_module (
   .new_imm(IF_new_imm),
   .new_predict_result(IF_new_predict_result),
   .new_instruction_able(Dispatcher_new_instruction_able),
+
   .RS_newEntry_en(Dispatcher_RS_new_Entry_en),
   .RS_robEntry(Dispatcher_RS_robEntry),
   .RS_opcode(Dispatcher_RS_opcode),
@@ -201,15 +216,21 @@ Dispatcher Dispatcher_module (
   .RS_imm(Dispatcher_RS_imm),
   .RS_pc(Dispatcher_RS_pc),
   .RS_isFull(RS_isFull),
-  .LSB_newEntry_en(LSB_mem_query_en),
-  .LSB_RoBIndex(LSB_RoB_write_index),
-  .LSB_opcode(LSB_mem_query_type),
-  .LSB_Vj(LSB_mem_query_data),
-  .LSB_Vk(LSB_RoB_write_data),
-  .LSB_Qj(LSB_mem_query_addr),
-  .LSB_Qk(LSB_mem_data_width),
-  .LSB_imm(LSB_mem_query_addr),
-  .LSB_pc(LSB_mem_query_addr),
+  
+  .LSB_newEntry_en(Dispatcher_LSB_newEntry_en),
+  .LSB_RoBIndex(Dispatcher_LSB_RoBIndex),
+  .LSB_opcode(Dispatcher_LSB_opcode),
+  .LSB_Vj(Dispatcher_LSB_Vj),
+  .LSB_Vk(Dispatcher_LSB_Vk),
+  .LSB_Qj(Dispatcher_LSB_Qj),
+  .LSB_Qk(Dispatcher_LSB_Qk),
+  .LSB_imm(Dispatcher_LSB_imm),
+  .LSB_pc(Dispatcher_LSB_pc),
+  .LSB_isFull(LSB_isFull),
+
+  .RoB_isFull(RoB_isFull),
+  .RoB_newEntryIndex(RoB_new_entry_index),
+  .RoB_flush_signal(RoB_flush_signal),
   .RoB_newEntry_en(Dispatcher_RoB_newEntry_en),
   .RoB_opcode(Dispatcher_RoB_opcode),
   .RoB_rd(Dispatcher_RoB_rd),
@@ -218,8 +239,13 @@ Dispatcher Dispatcher_module (
   .RoB_predict_result(Dispatcher_RoB_predict_result),
   .RoB_already_ready(Dispatcher_RoB_already_ready),
   .RoB_ready_data(Dispatcher_RoB_ready_data),
+
   .RF_rs1(Dispatcher_RF_rs1),
   .RF_rs2(Dispatcher_RF_rs2),
+  .RF_Qj(RF_Qj),
+  .RF_Qk(RF_Qk),
+  .RF_Vj(RF_Vj),
+  .RF_Vk(RF_Vk),
   .RF_newEntry_en(Dispatcher_RF_newEntry_en),
   .RF_newEntry_robIndex(Dispatcher_RF_newEntry_robIndex),
   .RF_occupied_rd(Dispatcher_RF_occupied_rd)
@@ -331,6 +357,7 @@ LSB LSB_module (
   .mem_query_addr(LSB_mem_query_addr),
   .mem_data_width(LSB_mem_data_width),
   .mem_query_data(LSB_mem_query_data),
+
   .new_entry_en(Dispatcher_RS_new_Entry_en),
   .new_entry_RoBIndex(Dispatcher_RS_robEntry),
   .new_entry_opcode(Dispatcher_RS_opcode),
@@ -340,14 +367,17 @@ LSB LSB_module (
   .new_entry_Qk(Dispatcher_RS_Qk),
   .new_entry_imm(Dispatcher_RS_imm),
   .new_entry_pc(Dispatcher_RS_pc),
+
   .RoB_update_en(CDB_RoBEntry_update_en),
   .RoB_update_index(CDB_RoBEntry_update_index),
   .RoB_update_data(CDB_RoBEntry_update_data),
   .RoB_write_en(LSB_RoB_write_en),
   .RoB_write_index(LSB_RoB_write_index),
   .RoB_write_data(LSB_RoB_write_data),
-  .RoB_headIndex(RoB_headIndex),
+
+  .RoB_headIndex(RoB_new_entry_index),
   .lstCommittedWrite(LSB_lstCommittedWrite),
+  .flush_signal(RoB_flush_signal),
   .isFull(LSB_isFull)
 );
 
@@ -355,8 +385,9 @@ Reservation_Station RS_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
+
   .new_entry_en(Dispatcher_RS_new_Entry_en),
-  .new_entry_RoBIndex(Dispatcher_RS_robEntry),
+  .new_entry_robEntry(Dispatcher_RS_robEntry),
   .new_entry_opcode(Dispatcher_RS_opcode),
   .new_entry_Vj(Dispatcher_RS_Vj),
   .new_entry_Vk(Dispatcher_RS_Vk),
@@ -364,14 +395,17 @@ Reservation_Station RS_module (
   .new_entry_Qk(Dispatcher_RS_Qk),
   .new_entry_imm(Dispatcher_RS_imm),
   .new_entry_pc(Dispatcher_RS_pc),
-  .RoB_update_en(CDB_RoBEntry_update_en),
-  .RoB_update_index(CDB_RoBEntry_update_index),
-  .RoB_update_data(CDB_RoBEntry_update_data),
+
+  .CDB_update_en(CDB_RoBEntry_update_en),
+  .CDB_update_index(CDB_RoBEntry_update_index),
+  .CDB_update_data(CDB_RoBEntry_update_data),
   .RS_update_en(RS_RS_update_en),
   .RS_update_index(RS_RS_update_index),
   .RS_update_data(RS_RS_update_data),
-  .isFull(RS_isFull),
-  .isEmpty(RS_isEmpty)
+
+  .flush_signal(RoB_flush_signal),
+  .isEmpty(RS_isEmpty),
+  .isFull(RS_isFull)
 );
 
 Branch_Predictor BP_module (
@@ -389,13 +423,16 @@ Instruction_Fetcher IF_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
-  .flush_signal(RoB_flush_signal),
-  .jalr_feedback_en(RoB_jalr_feedback_en),
-  .jalr_feedback_data(RoB_jalr_feedback_data),
-  .branch_fail_en(RoB_branch_fail_en),
-  .correct_next_pc(RoB_correct_next_pc),
   .icache_query_en(IF_icache_query_en),
   .icache_query_pc(IF_icache_query_pc),
+  .icache_data_en(icache_IF_dout_en),
+  .icache_data(icache_IF_dout),
+  .rob_isFull(RoB_isFull),
+  .new_entry_index(RoB_new_entry_index),
+  .jalr_result_en(RoB_jalr_feedback_en),
+  .jalr_result(RoB_jalr_feedback_data),
+  .correct_next_pc(RoB_correct_next_pc),
+  .new_instruction_able(Dispatcher_new_instruction_able),
   .new_instruction_en(IF_new_instruction_en),
   .new_pc(IF_new_pc),
   .new_opcode(IF_new_opcode),
@@ -404,7 +441,9 @@ Instruction_Fetcher IF_module (
   .new_rd(IF_new_rd),
   .new_imm(IF_new_imm),
   .new_predict_result(IF_new_predict_result),
-  .predict_query_pc(IF_predict_query_pc)
+  .predict_query_pc(IF_predict_query_pc),
+  .predict_result_en(branch_predictor_result_out),
+  .predict_result(branch_predictor_result_out)
 );
 
 Memory_Controller MC_module (

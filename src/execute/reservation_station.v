@@ -8,7 +8,7 @@
 module Reservation_Station #(
     parameter RS_WIDTH = 2,
     parameter RS_SIZE = 1 << RS_WIDTH,
-    parameter RoB_WIDTH = 2,
+    parameter RoB_WIDTH = 3,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
 
 
@@ -90,13 +90,18 @@ module Reservation_Station #(
     wire [RS_WIDTH : 0] idle_pos;
     wire [RS_WIDTH : 0] busy_pos;
     wire [RS_WIDTH : 0] ready_pos;
+    
+    assign idle_pos = (!isBusy[0]) ? 0 : (!isBusy[1]) ? 1 : (!isBusy[2]) ? 2 : (!isBusy[3]) ? 3 : 4;
+    assign busy_pos = (isBusy[0]) ? 0 : (isBusy[1]) ? 1 : (isBusy[2]) ? 2 : (isBusy[3]) ? 3 : 4;
+    assign ready_pos = (isReady[0]) ? 0 : (isReady[1]) ? 1 : (isReady[2]) ? 2 : (isReady[3]) ? 3 : 4;
+    /*
     assign idle_pos = (!isBusy[0]) ? 0 : (!isBusy[1]) ? 1 : (!isBusy[2]) ? 2 : (!isBusy[3]) ? 3 : (!isBusy[4]) ? 4 : 
             (!isBusy[5]) ? 5 : (!isBusy[6]) ? 6 : (!isBusy[7]) ? 7 : 8;
     assign busy_pos = (isBusy[0]) ? 0 : (isBusy[1]) ? 1 : (isBusy[2]) ? 2 : (isBusy[3]) ? 3 : (isBusy[4]) ? 4 :
             (isBusy[5]) ? 5 : (isBusy[6]) ? 6 : (isBusy[7]) ? 7 : 8;        
     assign ready_pos = (isReady[0]) ? 0 : (isReady[1]) ? 1 : (isReady[2]) ? 2 : (isReady[3]) ? 3 : (isReady[4]) ? 4 :
             (isReady[5]) ? 5 : (isReady[6]) ? 6 : (isReady[7]) ? 7 : 8;        
-
+    */
     assign isFull = (idle_pos == (1 << RS_WIDTH));
     assign isEmpty = (busy_pos == (1 << RS_WIDTH));
 

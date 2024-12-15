@@ -73,7 +73,7 @@ module LSB #(
     output reg [31 : 0] RoB_write_data,
 
     // with RoB
-    input wire [RoB_WIDTH : 0] RoB_headIndex, // the first entry waiting to commit, might be NON_DEP
+    input wire [RoB_WIDTH - 1 : 0] RoB_headIndex, // the first entry waiting to commit, might be NON_DEP
     output reg [RoB_WIDTH : 0] lstCommittedWrite, // RoBIndex of the last committed write by LSB, might be NON_DEP
 
     // FLUSH signal from RoB

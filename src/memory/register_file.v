@@ -81,7 +81,7 @@ module RF #(
             end
 
             // new entry, occcupy rd
-            if (new_entry_en && occupied_rd != 5'b000000) begin
+            if (new_entry_en && occupied_rd != 5'b00000) begin
                 dependency[occupied_rd] <= new_entry_robEntry;
             end
         end

@@ -45,7 +45,6 @@ module Instruction_Fetcher #(
     input wire [31 : 0] jalr_result,
     input wire [31 : 0] correct_next_pc, // the correct next pc
 
-
     // with Dispatcher
     input wire new_instruction_able, // able to issue new instruction, then IF will be launched
 

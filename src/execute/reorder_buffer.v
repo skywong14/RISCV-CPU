@@ -63,7 +63,7 @@ module RoB #(
     // with Dispatcher
     input wire new_entry_en,
     input wire [6 : 0] new_entry_opcode,
-    input wire [4 : 0] new_entry_rd,
+    input wire [4 : 0] new_entry_rd, // if rd == 0, means NON_DEP
     input wire [31 : 0] new_entry_pc,
     input wire [31 : 0] new_entry_next_pc,
     input wire new_entry_predict_result,
@@ -192,7 +192,8 @@ module RoB #(
             // get new entry
             if (!isFull && new_entry_en) begin
                 isBusy[tail_ptr] <= 1;
-                isReady[tail_ptr] <= 0;
+                isReady[tail_ptr] <= already_ready;
+                data[tail_ptr] <= already_ready ? ready_data : 0;
                 rd[tail_ptr] <= new_entry_rd;
                 pc[tail_ptr] <= new_entry_pc;
                 next_pc[tail_ptr] <= new_entry_next_pc;
