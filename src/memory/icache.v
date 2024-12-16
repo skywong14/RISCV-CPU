@@ -2,7 +2,6 @@
 // 
 // WORK_STATE: IDLE, BUSY (if not int cache and waiting for memory_controller)
 
-// 对于一个地址query_addr, 最后两位一定为00，规定一个块包含了内有 [ BLOCK_WIDTH + 1 : 2] 共 2 ^ BLOCK_WIDTH 个地址 (一个块的大小为 2 ^ BLOCK_WIDTH * 4 Byte)
 // ICACHE有 2 ^ CACHE_WIDTH 个块
 // 故 index_block = query_addr[BLOCK_WIDTH + 1 + CACHE_WIDTH : BLOCK_WIDTH + 2], index_addr = query_addr[BLOCK_WIDTH + 1 : 2]
 // query_addr: ... | <CACHE_WIDTH> | <BLOCK_WIDTH> | 00
@@ -53,6 +52,7 @@ module ICache #(
     reg [32 * BLOCK_SIZE - 1 : 0] cache_block[CACHE_SIZE - 1 : 0];
 
     integer i, j;
+    integer debug_counter, file;
 
     wire [CACHE_SIZE - 1 : 0] block_index;
     wire [BLOCK_WIDTH + 1 : 0] entry_index;
@@ -64,6 +64,7 @@ module ICache #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            debug_counter = 0;
             state <= IDLE;
             for (i = 0; i < CACHE_SIZE; i = i + 1) begin
                 data_valid[i] <= 0;
@@ -77,6 +78,7 @@ module ICache #(
         end
         else begin
             // run
+            debug_counter = debug_counter + 1;
             if (state == IDLE) begin
                 // handle query from IF
                 IF_dout_en <= 0;
@@ -119,6 +121,38 @@ module ICache #(
                 else begin
                     MC_query_en <= 0;
                 end
+            end
+
+            // debug, print like :
+            /* [debug_counter]: [STATE]
+             *                  (if MC_query_en ==1 ), MC_query_addr = [MC_query_addr]
+             *                  (if IF_dout_en == 1) IF_dout = [IF_dout]
+             *                  (if MC_data_en == 1) MC_data = [MC_data]
+             *                  (if IF_query_en == 1) IF_query_addr = [IF_query_addr]
+             */
+            if (debug_counter <= 100) begin
+                file = $fopen("icache_debug.txt", "a");
+                $fwrite(file, "[%d]: [", debug_counter);
+                case (state)
+                    IDLE: $fwrite(file, "IDLE");
+                    WAITING: $fwrite(file, "WAITING");
+                    default: $fwrite(file, "UNKNOWN");
+                endcase
+                $fwrite(file, "]");
+                if (MC_query_en) begin
+                    $fwrite(file, " (MC_query_addr = %d)", MC_query_addr);
+                end
+                if (IF_dout_en) begin
+                    $fwrite(file, " (IF_dout = %d)", IF_dout);
+                end
+                if (MC_data_en) begin
+                    $fwrite(file, " (MC_data = %d)", MC_data);
+                end
+                if (IF_query_en) begin
+                    $fwrite(file, " (IF_query_addr = %d)", IF_query_addr);
+                end
+                $fwrite(file, "\n");
+                $fclose(file);
             end
         end
     end    

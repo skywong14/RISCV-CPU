@@ -97,6 +97,7 @@ module LSB #(
     wire isReady[LSB_SIZE - 1 : 0];
 
     integer head_ptr, tail_ptr; // init: 0, 0
+    integer debug_counter, file;
 
     assign isFull = isBusy[tail_ptr];
 
@@ -113,6 +114,7 @@ module LSB #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            debug_counter = 0;
             state <= NORMAL;
             head_ptr <= 0;
             tail_ptr <= 0;
@@ -157,6 +159,7 @@ module LSB #(
             end
         end
         else begin
+            debug_counter = debug_counter + 1;
             // get a new entry
             if (new_entry_en && !isFull) begin
                 isBusy[tail_ptr] <= 1;

@@ -447,35 +447,6 @@ Branch_Predictor #(
   .result_out(branch_predictor_result_out)
 );
 
-Instruction_Fetcher #(
-  .RoB_WIDTH(RoB_WIDTH)
-) IF_module (
-  .clk_in(clk_in),
-  .rst_in(rst_in),
-  .rdy_in(rdy_in),
-  .icache_query_en(IF_icache_query_en),
-  .icache_query_pc(IF_icache_query_pc),
-  .icache_data_en(icache_IF_dout_en),
-  .icache_data(icache_IF_dout),
-  .rob_isFull(RoB_isFull),
-  .new_entry_index(RoB_new_entry_index),
-  .jalr_result_en(RoB_jalr_feedback_en),
-  .jalr_result(RoB_jalr_feedback_data),
-  .correct_next_pc(RoB_correct_next_pc),
-  .new_instruction_able(Dispatcher_new_instruction_able),
-  .new_instruction_en(IF_new_instruction_en),
-  .new_pc(IF_new_pc),
-  .new_opcode(IF_new_opcode),
-  .new_rs1(IF_new_rs1),
-  .new_rs2(IF_new_rs2),
-  .new_rd(IF_new_rd),
-  .new_imm(IF_new_imm),
-  .new_predict_result(IF_new_predict_result),
-  .predict_query_pc(IF_predict_query_pc),
-  .predict_result_en(branch_predictor_result_out),
-  .predict_result(branch_predictor_result_out)
-);
-
 Memory_Controller MC_module (
   .clk_in(clk_in),
   .rst_in(rst_in),

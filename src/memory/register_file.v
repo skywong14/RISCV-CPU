@@ -53,9 +53,12 @@ module RF #(
 
     integer i;
 
+    integer debug_counter, file;
+
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
+            debug_counter = 0;
             for (i = 0; i < REG_SIZE; i = i + 1) begin
                 registers[i] <= 0;
                 dependency[i] <= NON_DEP;
@@ -64,27 +67,57 @@ module RF #(
         else if (!rdy_in) begin
             // pause
         end 
-        else if (flush_signal) begin
-            // flush
-                for (i = 0; i < REG_SIZE; i = i + 1) begin
-                   dependency[i] <= NON_DEP;
-                end
-            end
         else begin
             // run
-            // if RoB_update_en && dependency[RoB_update_index] == RoB_update_index, update registers[RoB_update_index] and dependency[RoB_update_index]
-            if (RoB_update_en && RoB_update_reg != NON_DEP && RoB_update_reg != 5'b000000) begin
-                registers[RoB_update_index] <= RoB_update_data;
-                if (dependency[RoB_update_index] == RoB_update_index) begin
-                    dependency[RoB_update_index] <= NON_DEP;
+            debug_counter = debug_counter + 1;
+            if (flush_signal) begin
+                // flush
+                    for (i = 0; i < REG_SIZE; i = i + 1) begin
+                        dependency[i] <= NON_DEP;
+                    end
+                end
+            else begin
+                // run
+                // if RoB_update_en && dependency[RoB_update_index] == RoB_update_index, update registers[RoB_update_index] and dependency[RoB_update_index]
+                if (RoB_update_en && RoB_update_reg != NON_DEP && RoB_update_reg != 5'b000000) begin
+                    registers[RoB_update_index] <= RoB_update_data;
+                    if (dependency[RoB_update_index] == RoB_update_index) begin
+                        dependency[RoB_update_index] <= NON_DEP;
+                    end
+                end
+
+                // new entry, occcupy rd
+                if (new_entry_en && occupied_rd != 5'b00000) begin
+                    dependency[occupied_rd] <= new_entry_robEntry;
                 end
             end
 
-            // new entry, occcupy rd
-            if (new_entry_en && occupied_rd != 5'b00000) begin
-                dependency[occupied_rd] <= new_entry_robEntry;
+            // debug, print like :
+            /* [debug_counter]: 
+             * for i in [0, REG_SIZE - 1]:
+             *     if (dependency[i] != NON_DEP || registers[i] != 0)
+             *       print: [i] = [registers[i]], RoB = [dependency[i]] (if dependency[i] != NON_DEP, print "NON_DEP")
+             */
+            if (debug_counter <= 100) begin
+                file = $fopen("RF_debug.txt", "a");
+                $fdisplay(file, "[%d]: ", debug_counter);
+                for (i = 0; i < REG_SIZE; i = i + 1) begin
+                    if (dependency[i] != NON_DEP || registers[i] != 0) begin
+                        $fdisplay(file, "[%d] = [%d], RoB = ", i, registers[i]);
+                        if (dependency[i] != NON_DEP) begin
+                            $fdisplay(file, "[%d]", dependency[i]);
+                        end
+                        else begin
+                            $fdisplay(file, "NON_DEP");
+                        end
+                        $fdisplay(file, " ");
+                    end
+                end
+                $fdisplay(file, "\n");
+                $fclose(file);
             end
         end
+        
 
     end
 

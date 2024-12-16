@@ -84,8 +84,11 @@ module Instruction_Fetcher #(
 
     assign predict_query_pc = pc;
 
+    integer debug_counter, file;
+
     always @(posedge clk_in) begin
         if (rst_in) begin
+            debug_counter = 0;
             // reset
             state <= IDLE;
             pc <= 0;
@@ -97,68 +100,94 @@ module Instruction_Fetcher #(
         else if (!rdy_in) begin
             // pause
         end
-        else if (state == WAITING_JALR) begin
-            // waiting for jalr result
-            if (jalr_result_en) begin
-                pc <= jalr_result;
-                state <= IDLE;
-            end
-        end
-        else if (state == WAITING_ICACHE) begin
-            // waiting
-            if (icache_data_en) begin
-                cur_instruction <= icache_data;
-                state <= ISSUING;
-                icache_query_en <= 0;
-            end
-            else begin
-                icache_query_en <= 0;
-            end
-        end
-        else if (state == IDLE) begin
-            // pc is ready
-            // try to fetch the instruction at pc (ask ICache)
-            icache_query_en <= 1;
-            icache_query_pc <= pc;
-            state <= WAITING_ICACHE;
-        end
-        else if (state == ISSUING && new_instruction_able) begin
-            // pc and instruction are ready
-            // use module_Decoder to decode the instruction
-            case (opcode)
-                jalr: begin
-                    state <= WAITING_JALR;
-                end
-                jal: begin
-                    pc <= pc + imm;
+        else begin
+            debug_counter = debug_counter + 1;
+            // run
+            if (state == WAITING_JALR) begin
+                // waiting for jalr result
+                if (jalr_result_en) begin
+                    pc <= jalr_result;
                     state <= IDLE;
                 end
-                beq, bne, blt, bge, bltu, bgeu: begin
-                    if (predict_result) begin
+            end
+            else if (state == WAITING_ICACHE) begin
+                // waiting
+                if (icache_data_en) begin
+                    cur_instruction <= icache_data;
+                    state <= ISSUING;
+                    icache_query_en <= 0;
+                end
+                else begin
+                    icache_query_en <= 0;
+                end
+            end
+            else if (state == IDLE) begin
+                // pc is ready
+                // try to fetch the instruction at pc (ask ICache)
+                icache_query_en <= 1;
+                icache_query_pc <= pc;
+                state <= WAITING_ICACHE;
+            end
+            else if (state == ISSUING && new_instruction_able) begin
+                // pc and instruction are ready
+                // use module_Decoder to decode the instruction
+                case (opcode)
+                    jalr: begin
+                        state <= WAITING_JALR;
+                    end
+                    jal: begin
                         pc <= pc + imm;
+                        state <= IDLE;
                     end
-                    else begin
+                    beq, bne, blt, bge, bltu, bgeu: begin
+                        if (predict_result) begin
+                            pc <= pc + imm;
+                        end
+                        else begin
+                            pc <= pc + 4;
+                        end
+                        state <= IDLE;
+                    end
+                    default: begin
                         pc <= pc + 4;
+                        state <= IDLE;
                     end
-                    state <= IDLE;
-                end
-                default: begin
-                    pc <= pc + 4;
-                    state <= IDLE;
-                end
-            endcase
+                endcase
             
-            // issue the instruction to Dispatcher
-            new_instruction_en <= 1;
-            new_pc <= pc;
-            new_opcode <= opcode;
-            new_rs1 <= rs1;
-            new_rs2 <= rs2;
-            new_rd <= rd;
-            new_imm <= imm;
-            new_predict_result <= predict_result;
-        end else begin
-            new_instruction_en <= 0;
+                // issue the instruction to Dispatcher
+                new_instruction_en <= 1;
+                new_pc <= pc;
+                new_opcode <= opcode;
+                new_rs1 <= rs1;
+                new_rs2 <= rs2;
+                new_rd <= rd;
+                new_imm <= imm;
+                new_predict_result <= predict_result;
+            end else begin
+                new_instruction_en <= 0;
+            end
+
+            // debug, print like :
+            /* [debug_counter]: 
+             *      if (icache_en == 1) print "instruction = get [icache_data] at [icache_query_pc]"
+             *      if (new_instruction_en == 1) print "new instruction = [opcode] [new_rs1] [new_rs2] [new_rd] [new_imm] [new_predict_result(if branch)]"
+             */
+            if (debug_counter <= 100) begin
+                file = $fopen("IF_debug.txt", "a");
+                $fdisplay(file, "[%d]: ", debug_counter);
+                if (icache_query_en) begin
+                    $fdisplay(file, "instruction = get %d at %d", icache_data, icache_query_pc);
+                end
+                if (new_instruction_en) begin
+                    case (new_opcode)
+                        jalr: $fdisplay(file, "new instruction = (jalr) %d %d %d %d", new_rs1, new_rs2, new_rd, new_imm);
+                        jal: $fdisplay(file, "new instruction = (jal) %d %d %d %d", new_rs1, new_rs2, new_rd, new_imm);
+                        beq, bne, blt, bge, bltu, bgeu: $fdisplay(file, "new instruction = (branch: %d) %d %d %d %d bp = %d", opcode, new_rs1, new_rs2, new_rd, new_imm, new_predict_result);
+                        default: $fdisplay(file, "new instruction = (other: %d) %d %d %d %d", opcode, new_rs1, new_rs2, new_rd, new_imm);
+                    endcase
+                end
+                $fclose(file);
+            end
         end
     end
 
