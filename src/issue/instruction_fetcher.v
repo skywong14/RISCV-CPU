@@ -34,6 +34,7 @@ module Instruction_Fetcher #(
     output reg icache_query_en,
     output reg [31 : 0] icache_query_pc,
     input wire icache_data_en,
+    input wire [31 : 0] icache_addr_comfirm,
     input wire [31 : 0] icache_data,
 
     // with RoB
@@ -117,13 +118,11 @@ module Instruction_Fetcher #(
                     state <= ISSUING;
                     icache_query_en <= 0;
                 end
-                else begin
-                    icache_query_en <= 0;
-                end
             end
             else if (state == IDLE) begin
                 // pc is ready
                 // try to fetch the instruction at pc (ask ICache)
+                new_instruction_en <= 0;
                 icache_query_en <= 1;
                 icache_query_pc <= pc;
                 state <= WAITING_ICACHE;
@@ -137,26 +136,28 @@ module Instruction_Fetcher #(
                     end
                     jal: begin
                         pc <= pc + imm;
+                        new_pc <= pc + imm;
                         state <= IDLE;
                     end
                     beq, bne, blt, bge, bltu, bgeu: begin
                         if (predict_result) begin
                             pc <= pc + imm;
+                            new_pc <= pc + imm;
                         end
                         else begin
                             pc <= pc + 4;
+                            new_pc <= pc + 4;
                         end
                         state <= IDLE;
                     end
                     default: begin
                         pc <= pc + 4;
+                        new_pc <= pc + 4;
                         state <= IDLE;
                     end
                 endcase
-            
                 // issue the instruction to Dispatcher
                 new_instruction_en <= 1;
-                new_pc <= pc;
                 new_opcode <= opcode;
                 new_rs1 <= rs1;
                 new_rs2 <= rs2;

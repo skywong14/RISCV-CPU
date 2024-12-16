@@ -181,7 +181,7 @@ module Reservation_Station #(
                 end
             end
 
-            // calc a ready entry and commit
+            // calc a ready entry, commit, clear
             if (ready_pos != (1 << RS_WIDTH)) begin
                 RS_update_en <= 1;
                 RS_update_index <= robEntry[ready_pos];
@@ -216,6 +216,16 @@ module Reservation_Station #(
                     orr: RS_update_data <= Vj[ready_pos] | Vk[ready_pos];
                     andr: RS_update_data <= Vj[ready_pos] & Vk[ready_pos];
                 endcase
+                // clear ready entry
+                isBusy[ready_pos] <= 0;
+                opcode[ready_pos] <= 0;
+                Vj[ready_pos] <= 0;
+                Vk[ready_pos] <= 0;
+                Qj[ready_pos] <= NON_DEP;
+                Qk[ready_pos] <= NON_DEP;
+                imm[ready_pos] <= 0;
+                robEntry[ready_pos] <= 0;
+                pc[ready_pos] <= 0;
             end
         end
     end

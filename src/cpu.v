@@ -2,9 +2,7 @@
 // port modification allowed for debugging purposes
 
 module cpu #(
-  parameter RoB_WIDTH = 1,
-  parameter BLOCK_WIDTH = 2,
-  parameter BLOCK_SIZE = 1 << BLOCK_WIDTH, 
+  parameter RoB_WIDTH = 0,
   parameter LSB_WIDTH = 3,
   parameter RS_WIDTH = 2,
   parameter BP_WIDTH = 2
@@ -129,11 +127,11 @@ wire icache_IF_dout_en;
 wire [31 : 0] icache_IF_dout;
 
 // output by Memory_Controller
-wire [7 : 0] MC_ram_din;
-wire [16 : 0] MC_ram_addr_in;
+wire [7 : 0] MC_ram_dout;
+wire [17 : 0] MC_ram_addr_in;
 wire MC_ram_query_type;
 wire MC_icache_block_en;
-wire [32 * BLOCK_SIZE - 1 : 0] MC_icache_block_data;
+wire [31 : 0] MC_icache_block_data;
 wire MC_LSB_result_en;
 wire [31 : 0] MC_LSB_result_data;
 
@@ -147,6 +145,10 @@ wire [31 : 0] RF_Vk;
 wire CDB_RoBEntry_update_en;
 wire [RoB_WIDTH - 1 : 0] CDB_RoBEntry_update_index;
 wire [31 : 0] CDB_RoBEntry_update_data;
+
+assign mem_a = MC_ram_addr_in;
+assign mem_dout = MC_ram_dout;
+assign mem_wr = !MC_ram_query_type;
 
 RoB #(
   .RoB_WIDTH(RoB_WIDTH)
@@ -291,7 +293,7 @@ Instruction_Fetcher #(
 );
 
 ICache #(
-  .BLOCK_WIDTH(BLOCK_WIDTH)
+  
 ) ICache_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
@@ -306,15 +308,13 @@ ICache #(
   .IF_dout(icache_IF_dout)
 );
 
-Memory_Controller #(
-  .BLOCK_WIDTH(BLOCK_WIDTH)
-) Memory_Controller_module (
+Memory_Controller Memory_Controller_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
   .uart_isFull(io_buffer_full),
-  .ram_dout(mem_din),
-  .ram_din(MC_ram_din),
+  .ram_dout(MC_ram_dout),
+  .ram_din(mem_din),
   .ram_addr_in(MC_ram_addr_in),
   .ram_query_type(MC_ram_query_type),
   .icache_query_en(icache_MC_query_en),
@@ -433,42 +433,6 @@ Reservation_Station #(
   .isEmpty(RS_isEmpty),
   .isFull(RS_isFull)
 );
-
-Branch_Predictor #(
-  .BP_WIDTH(BP_WIDTH)
-) BP_module (
-  .clk_in(clk_in),
-  .rst_in(rst_in),
-  .rdy_in(rdy_in),
-  .update_en(RoB_branch_predictor_en),
-  .update_PC(IF_predict_query_pc),
-  .update_result(RoB_branch_predictor_result),
-  .query_PC(IF_icache_query_pc),
-  .result_out(branch_predictor_result_out)
-);
-
-Memory_Controller MC_module (
-  .clk_in(clk_in),
-  .rst_in(rst_in),
-  .rdy_in(rdy_in),
-  .uart_isFull(io_buffer_full),
-  .ram_dout(mem_din),
-  .ram_din(MC_ram_din),
-  .ram_addr_in(MC_ram_addr_in),
-  .ram_query_type(MC_ram_query_type),
-  .icache_query_en(icache_MC_query_en),
-  .head_addr(icache_MC_query_addr),
-  .icache_block_en(MC_icache_block_en),
-  .icache_block_data(MC_icache_block_data),
-  .LSB_query_en(LSB_mem_query_en),
-  .LSB_query_type(LSB_mem_query_type),
-  .LSB_query_addr(LSB_mem_query_addr),
-  .LSB_data_width(LSB_mem_data_width),
-  .LSB_query_data(LSB_mem_query_data),
-  .LSB_result_en(MC_LSB_result_en),
-  .LSB_result_data(MC_LSB_result_data)
-);
-
 
 always @(posedge clk_in)
   begin

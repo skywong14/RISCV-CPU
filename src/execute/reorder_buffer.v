@@ -52,8 +52,7 @@ module RoB #(
     parameter REGISTER = 1,
     parameter BRANCH = 2,
     parameter JALR = 3,
-    parameter STORE = 4,
-    parameter ERROR = 5
+    parameter STORE = 4
 ) (
     // cpu
     input wire clk_in,
@@ -100,7 +99,7 @@ module RoB #(
     output reg flush_signal // high when predict goes wrong
 );
 
-    reg [RoB_WIDTH - 1 : 0] head_ptr, tail_ptr;
+    integer head_ptr, tail_ptr;
 
 // Entry: isBusy, isReady, opcode, rd, pc, next_pc, predict_result(1 or 0), data, extra_data, 
 /* opType:  
@@ -125,6 +124,28 @@ module RoB #(
 
     assign isFull = (head_ptr == tail_ptr) && isBusy[head_ptr];
     assign new_entry_index = tail_ptr;
+
+    // for debug
+    wire [2 : 0] opType_debug;
+    wire [31 : 0] data_debug;
+    wire [31 : 0] extra_data_debug;
+    wire [31 : 0] pc_debug;
+    wire [31 : 0] next_pc_debug;
+    wire [31 : 0] predict_result_debug;
+    wire [6 : 0] opcode_debug;
+    wire [31 : 0] rd_debug;
+    wire isReady_debug;
+    wire isBusy_debug;
+    assign opType_debug = opType[head_ptr];
+    assign data_debug = data[head_ptr];
+    assign extra_data_debug = extra_data[head_ptr];
+    assign pc_debug = pc[head_ptr];
+    assign next_pc_debug = next_pc[head_ptr];
+    assign predict_result_debug = predict_result[head_ptr];
+    assign opcode_debug = opcode[head_ptr];
+    assign rd_debug = rd[head_ptr];
+    assign isBusy_debug = isBusy[head_ptr];
+    assign isReady_debug = isReady[head_ptr];
 
     // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
@@ -214,7 +235,7 @@ module RoB #(
                         opType[tail_ptr] <= STORE;
                     end
                     default: begin
-                        opType[tail_ptr] <= ERROR;
+                        opType[tail_ptr] <= EMPTY;
                     end
                 endcase
                 tail_ptr <= (tail_ptr + 1) % RoB_SIZE;
@@ -273,7 +294,16 @@ module RoB #(
                     end
                 endcase
                 isBusy[head_ptr] <= 0;
+                isReady[head_ptr] <= 0;
                 head_ptr <= (head_ptr + 1) % RoB_SIZE;
+                opType[head_ptr] <= EMPTY;
+                rd[head_ptr] <= 0;
+                pc[head_ptr] <= 0;
+                next_pc[head_ptr] <= 0;
+                predict_result[head_ptr] <= 0;
+                data[head_ptr] <= 0;
+                extra_data[head_ptr] <= 0;
+                opcode[head_ptr] <= 0;
             end
         end
     end

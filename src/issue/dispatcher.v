@@ -165,7 +165,7 @@ module Dispatcher #(
 
                         // RoB
                         RoB_already_ready <= 1;
-                        RoB_ready_data <= new_imm << 12;
+                        RoB_ready_data <= new_imm;
 
                         RoB_newEntry_en <= 1;
                         RoB_opcode <= lui;
@@ -180,7 +180,7 @@ module Dispatcher #(
 
                         // RoB
                         RoB_already_ready <= 1;
-                        RoB_ready_data <= new_pc + (new_imm << 12);
+                        RoB_ready_data <= new_pc + new_imm;
 
                         RoB_newEntry_en <= 1;
                         RoB_opcode <= auipc;

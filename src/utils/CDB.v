@@ -24,8 +24,8 @@ module CDB #(
     output wire [31 : 0] RoBEntry_update_data
 );
 
-    assign RoBEntry_update_en = RS_update_data || LSB_update_data;
-    assign RoBEntry_update_index = RS_update_data ? RS_update_index : LSB_update_index;
-    assign RoBEntry_update_data = RS_update_data ? RS_update_data : LSB_update_data;
-    
+    assign RoBEntry_update_en = LSB_update_en || RS_update_en;
+    assign RoBEntry_update_index = RS_update_en ? RS_update_index : LSB_update_index;
+    assign RoBEntry_update_data = RS_update_en ? RS_update_data : LSB_update_data;
+    assign conflict_signal = LSB_update_en && RS_update_en; // it goes wrong if conflict, for debug  
 endmodule
