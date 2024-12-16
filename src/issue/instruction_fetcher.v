@@ -10,7 +10,6 @@ module Instruction_Fetcher #(
     parameter RoB_WIDTH = 3,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
 
-
     parameter IDLE = 0,
     parameter WAITING_ICACHE = 1,
     parameter WAITING_JALR = 2,

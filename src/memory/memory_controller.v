@@ -6,7 +6,6 @@
 
 
 module Memory_Controller #(
-
     parameter BLOCK_WIDTH = 2, // 4 words, 16 bytes in a block(i.e. 4 instructions per block), this parameter should not be modified
     parameter BLOCK_SIZE = 1 << BLOCK_WIDTH, 
 

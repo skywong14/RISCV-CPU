@@ -9,9 +9,9 @@
 
 module RF #(
     parameter RoB_WIDTH = 3,
-    parameter REG_SIZE = 32,
-    
-    parameter NON_DEP = 1 << 5
+    parameter REG_WIDTH = 5,
+    parameter REG_SIZE = 1 << REG_WIDTH,
+    parameter NON_DEP = 1 << RoB_WIDTH
 ) (
     // cpu
     input wire clk_in,
@@ -23,12 +23,12 @@ module RF #(
 
     // notified by RoB
     input wire RoB_update_en,
-    input wire[5 : 0] RoB_update_reg, 
+    input wire[4 : 0] RoB_update_reg, 
     input wire [RoB_WIDTH - 1 : 0] RoB_update_index,
     input wire [31 : 0] RoB_update_data,
 
     // with Dispatcher
-    input wire [5 : 0] rs1, rs2, // wire[5] is valid signal
+    input wire [4 : 0] rs1, rs2, // reg_index == 0 means it is not used(or simply reg[0])
     output wire [RoB_WIDTH : 0] Qj, Qk, // wire[RoB_WIDTH] is valid signal
     output wire [31 : 0] Vj, Vk,
     
@@ -42,8 +42,8 @@ module RF #(
 
     // ATTENTION: if RoB notify RF to update and query at the same time, the update should be done first
 
-    assign Qj = (flush_signal || rs1 == NON_DEP || RoB_update_en && dependency[rs1] == RoB_update_index) ? NON_DEP : dependency[rs1];
-    assign Qk = (flush_signal || rs2 == NON_DEP || RoB_update_en && dependency[rs2] == RoB_update_index) ? NON_DEP : dependency[rs2];
+    assign Qj = (flush_signal || rs1 == 0 || RoB_update_en && dependency[rs1] == RoB_update_index) ? NON_DEP : dependency[rs1];
+    assign Qk = (flush_signal || rs2 == 0 || RoB_update_en && dependency[rs2] == RoB_update_index) ? NON_DEP : dependency[rs2];
     
     // if (Qj == NON_DEP && dependency[rs1] != NON_DEP) Vj = RoB_update_data;
     // else Vj = (Qj == NON_DEP) ? registers[rs1] : 0;
@@ -73,7 +73,7 @@ module RF #(
         else begin
             // run
             // if RoB_update_en && dependency[RoB_update_index] == RoB_update_index, update registers[RoB_update_index] and dependency[RoB_update_index]
-            if (RoB_update_en && RoB_update_reg != NON_DEP && RoB_update_reg != 6'b000000) begin
+            if (RoB_update_en && RoB_update_reg != NON_DEP && RoB_update_reg != 5'b000000) begin
                 registers[RoB_update_index] <= RoB_update_data;
                 if (dependency[RoB_update_index] == RoB_update_index) begin
                     dependency[RoB_update_index] <= NON_DEP;

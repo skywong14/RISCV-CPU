@@ -16,12 +16,13 @@
 
 // commite WRITE command: isBusy && isReady && Head_Entry.RoBIndex == RoB.headIndex
 
-
 module LSB #(
-    parameter LSB_WIDTH = 2,
+    parameter LSB_WIDTH = 3,
+    // parameter LSB_WIDTH = `LSB_WIDTH,
     parameter LSB_SIZE = 1 << LSB_WIDTH,
 
-    parameter RoB_WIDTH = 3, // RoBEntry width
+    parameter RoB_WIDTH = 1, // RoBEntry width
+    // parameter RoB_WIDTH = `RoB_WIDTH, // RoBEntry width
     parameter RoB_SIZE = 1 << RoB_WIDTH, // [0, RoBSIZE - 1] is valid
     parameter NON_DEP = 1 << RoB_WIDTH, // NON_DEP signal
 

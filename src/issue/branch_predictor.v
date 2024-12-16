@@ -6,8 +6,8 @@
 // 11: Strongly Taken
 
 module Branch_Predictor #(
-    parameter WIDTH = 2,
-    parameter SIZE = 1 << WIDTH
+    parameter BP_WIDTH = 2,
+    parameter SIZE = 1 << BP_WIDTH
 ) (
     // cpu
     input wire clk_in,
@@ -25,7 +25,7 @@ module Branch_Predictor #(
 );
     reg [1 : 0] regList[SIZE - 1 : 0];
 
-    assign result_out = regList[query_PC[WIDTH + 1 : 2]][1];
+    assign result_out = regList[query_PC[BP_WIDTH + 1 : 2]][1];
 
     integer i;
 
@@ -44,14 +44,14 @@ module Branch_Predictor #(
             if (update_en) begin
                 if (update_result) begin
                     // jump, add
-                    if (regList[update_PC[WIDTH + 1 : 2]] < 3) begin
-                        regList[update_PC[WIDTH + 1 : 2]] <= regList[update_PC[WIDTH + 1 : 2]] + 1;
+                    if (regList[update_PC[BP_WIDTH + 1 : 2]] < 3) begin
+                        regList[update_PC[BP_WIDTH + 1 : 2]] <= regList[update_PC[BP_WIDTH + 1 : 2]] + 1;
                     end
                 end
                 else begin
                     // not jump, dec
-                    if (regList[update_PC[WIDTH + 1 : 2]] > 0) begin
-                        regList[update_PC[WIDTH + 1 : 2]] <= regList[update_PC[WIDTH + 1 : 2]] - 1;
+                    if (regList[update_PC[BP_WIDTH + 1 : 2]] > 0) begin
+                        regList[update_PC[BP_WIDTH + 1 : 2]] <= regList[update_PC[BP_WIDTH + 1 : 2]] - 1;
                     end
                 end
             end

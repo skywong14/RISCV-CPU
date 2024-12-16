@@ -2,10 +2,12 @@
 // port modification allowed for debugging purposes
 
 module cpu #(
-  parameter RoB_WIDTH = 3,
-  parameter RoB_SIZE = 1 << RoB_WIDTH,
+  parameter RoB_WIDTH = 1,
   parameter BLOCK_WIDTH = 2,
-  parameter BLOCK_SIZE = 1 << BLOCK_WIDTH
+  parameter BLOCK_SIZE = 1 << BLOCK_WIDTH, 
+  parameter LSB_WIDTH = 3,
+  parameter RS_WIDTH = 2,
+  parameter BP_WIDTH = 2
 ) (
   input  wire                 clk_in,			// system clock signal
   input  wire                 rst_in,			// reset signal
@@ -47,7 +49,7 @@ wire LSB_isFull;
 
 // output by RoB
 wire RoB_RF_update_en;
-wire [5 : 0] RoB_RF_update_reg;
+wire [4 : 0] RoB_RF_update_reg;
 wire [RoB_WIDTH - 1 : 0] RoB_RF_update_index;
 wire [31 : 0] RoB_RF_update_data;
 wire RoB_jalr_feedback_en;
@@ -101,8 +103,8 @@ wire Dispatcher_RoB_predict_result;
 wire Dispatcher_RoB_already_ready;
 wire [31 : 0] Dispatcher_RoB_ready_data;
 
-wire [5 : 0] Dispatcher_RF_rs1;
-wire [5 : 0] Dispatcher_RF_rs2;
+wire [4 : 0] Dispatcher_RF_rs1;
+wire [4 : 0] Dispatcher_RF_rs2;
 wire Dispatcher_RF_newEntry_en;
 wire [RoB_WIDTH - 1 : 0] Dispatcher_RF_newEntry_robIndex;
 wire [4 : 0] Dispatcher_RF_occupied_rd;
@@ -146,7 +148,9 @@ wire CDB_RoBEntry_update_en;
 wire [RoB_WIDTH - 1 : 0] CDB_RoBEntry_update_index;
 wire [31 : 0] CDB_RoBEntry_update_data;
 
-RoB RoB_module (
+RoB #(
+  .RoB_WIDTH(RoB_WIDTH)
+) RoB_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -180,7 +184,9 @@ RoB RoB_module (
   .flush_signal(RoB_flush_signal)
 );
 
-Branch_Predictor Branch_Predictor_module (
+Branch_Predictor #(
+  .BP_WIDTH(BP_WIDTH)
+) Branch_Predictor_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -191,7 +197,11 @@ Branch_Predictor Branch_Predictor_module (
   .result_out(branch_predictor_result_out)
 );
 
-Dispatcher Dispatcher_module (
+Dispatcher #(
+  .RoB_WIDTH(RoB_WIDTH),
+  .LSB_WIDTH(LSB_WIDTH),
+  .RS_WIDTH(RS_WIDTH)
+) Dispatcher_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -251,7 +261,9 @@ Dispatcher Dispatcher_module (
   .RF_occupied_rd(Dispatcher_RF_occupied_rd)
 );
 
-Instruction_Fetcher Instruction_Fetcher_module (
+Instruction_Fetcher #(
+  .RoB_WIDTH(RoB_WIDTH)
+) Instruction_Fetcher_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -278,7 +290,9 @@ Instruction_Fetcher Instruction_Fetcher_module (
   .predict_result(branch_predictor_result_out)
 );
 
-ICache ICache_module (
+ICache #(
+  .BLOCK_WIDTH(BLOCK_WIDTH)
+) ICache_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -292,7 +306,9 @@ ICache ICache_module (
   .IF_dout(icache_IF_dout)
 );
 
-Memory_Controller Memory_Controller_module (
+Memory_Controller #(
+  .BLOCK_WIDTH(BLOCK_WIDTH)
+) Memory_Controller_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -314,7 +330,9 @@ Memory_Controller Memory_Controller_module (
   .LSB_result_data(MC_LSB_result_data)
 );
 
-RF RF_module (
+RF #(
+  .RoB_WIDTH(RoB_WIDTH)
+) RF_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -334,7 +352,9 @@ RF RF_module (
   .occupied_rd(Dispatcher_RF_occupied_rd)
 );
 
-CDB CDB_module (
+CDB #(
+  .RoB_WIDTH(RoB_WIDTH)
+) CDB_module (
   .LSB_update_en(MC_LSB_result_en),
   .LSB_update_index(LSB_RoB_write_index),
   .LSB_update_data(MC_LSB_result_data),
@@ -346,7 +366,10 @@ CDB CDB_module (
   .RoBEntry_update_data(CDB_RoBEntry_update_data)
 );
 
-LSB LSB_module (
+LSB #(
+  .RoB_WIDTH(RoB_WIDTH),
+  .LSB_WIDTH(LSB_WIDTH)
+) LSB_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -381,7 +404,10 @@ LSB LSB_module (
   .isFull(LSB_isFull)
 );
 
-Reservation_Station RS_module (
+Reservation_Station #(
+  .RoB_WIDTH(RoB_WIDTH),
+  .RS_WIDTH(RS_WIDTH)
+) RS_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -408,7 +434,9 @@ Reservation_Station RS_module (
   .isFull(RS_isFull)
 );
 
-Branch_Predictor BP_module (
+Branch_Predictor #(
+  .BP_WIDTH(BP_WIDTH)
+) BP_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -419,7 +447,9 @@ Branch_Predictor BP_module (
   .result_out(branch_predictor_result_out)
 );
 
-Instruction_Fetcher IF_module (
+Instruction_Fetcher #(
+  .RoB_WIDTH(RoB_WIDTH)
+) IF_module (
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),

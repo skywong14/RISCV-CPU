@@ -78,7 +78,7 @@ module RoB #(
 
     // notify RF
     output reg RF_update_en,
-    output reg [5 : 0] RF_update_reg,
+    output reg [4 : 0] RF_update_reg,
     output reg [RoB_WIDTH - 1 : 0] RF_update_index,
     output reg [31 : 0] RF_update_data,
 
@@ -135,6 +135,7 @@ module RoB #(
 
             flush_signal <= 0;
             RF_update_en <= 0;
+            RF_update_reg <= 0;
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;
@@ -162,6 +163,7 @@ module RoB #(
 
             flush_signal <= 0;
             RF_update_en <= 0;
+            RF_update_reg <= 0;
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;
@@ -180,11 +182,10 @@ module RoB #(
             end
         end
         else begin
-            // run
-            
             // reset enable signals
             flush_signal <= 0;
             RF_update_en <= 0;
+            RF_update_reg <= 0;
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;

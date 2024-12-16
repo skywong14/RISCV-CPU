@@ -107,8 +107,8 @@ module Dispatcher #(
     output reg [31 : 0] RoB_ready_data,
 
     // with RF
-    output wire [5 : 0] RF_rs1,
-    output wire [5 : 0] RF_rs2,
+    output wire [4 : 0] RF_rs1,
+    output wire [4 : 0] RF_rs2,
     input wire [RoB_WIDTH : 0] RF_Qj,
     input wire [RoB_WIDTH : 0] RF_Qk,
     input wire [31 : 0] RF_Vj,
@@ -118,6 +118,12 @@ module Dispatcher #(
     output reg [RoB_WIDTH - 1 : 0] RF_newEntry_robIndex,
     output reg [4 : 0] RF_occupied_rd
 );
+
+    assign RF_rs1 = (new_opcode == lui || new_opcode == auipc || new_opcode == jal) ? 0 : new_rs1;
+    assign RF_rs2 = (new_opcode == lui || new_opcode == auipc || new_opcode == jal || new_opcode == jalr
+        || new_opcode == lb || new_opcode == lh || new_opcode == lw || new_opcode == lbu || new_opcode == lhu
+        || new_opcode == addi || new_opcode == slti || new_opcode == sltiu || new_opcode == xori || new_opcode == ori
+        || new_opcode == andi || new_opcode == slli || new_opcode == srli || new_opcode == srai) ? 0 : new_rs2;
 
     assign new_instruction_able = (!RoB_isFull) && (!RS_isFull) && (!LSB_isFull);
 
