@@ -27,11 +27,15 @@ module RF #(
     input wire [RoB_WIDTH - 1 : 0] RoB_update_index,
     input wire [31 : 0] RoB_update_data,
 
+    // for debug
+    input wire debug_en,
+    input wire [31 : 0] debug_commit_id,
+
     // with Dispatcher
     input wire [4 : 0] rs1, rs2, // reg_index == 0 means it is not used(or simply reg[0])
     output wire [RoB_WIDTH : 0] Qj, Qk, // wire[RoB_WIDTH] is valid signal
     output wire [31 : 0] Vj, Vk,
-    
+
     input new_entry_en,
     input [RoB_WIDTH - 1 : 0] new_entry_robEntry,
     input [4 : 0] occupied_rd
@@ -53,7 +57,7 @@ module RF #(
 
     integer i;
 
-    integer debug_counter, file;
+    integer file;
 
     // debug
     wire [RoB_WIDTH : 0] debug_sp_dep;
@@ -64,7 +68,6 @@ module RF #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
-            debug_counter = 0;
             for (i = 0; i < REG_SIZE; i = i + 1) begin
                 registers[i] <= 0;
                 dependency[i] <= NON_DEP;
@@ -81,7 +84,6 @@ module RF #(
         end
         else begin
             // run
-            debug_counter = debug_counter + 1;
             // if RoB_update_en && dependency[RoB_update_reg] == RoB_update_index, update registers[RoB_update_reg] and dependency[RoB_update_reg]
             if (RoB_update_en && RoB_update_reg != 5'b00000) begin
                 registers[RoB_update_reg] <= RoB_update_data;
@@ -94,32 +96,22 @@ module RF #(
                 dependency[occupied_rd] <= new_entry_robEntry;
             end
 
-            // debug, print like :
-            /* [debug_counter]: 
-             * for i in [0, REG_SIZE - 1]:
-             *     if (dependency[i] != NON_DEP || registers[i] != 0)
-             *       print: [i] = [registers[i]], RoB = [dependency[i]] (if dependency[i] != NON_DEP, print "NON_DEP")
-             */
-             /*
-            if (debug_counter <= 100) begin
+            // debug
+            if (debug_en) begin
                 file = $fopen("RF_debug.txt", "a");
-                $fdisplay(file, "[%d]: ", debug_counter);
+                $fdisplay(file, "commit_id = [%d]: ", debug_commit_id);
                 for (i = 0; i < REG_SIZE; i = i + 1) begin
                     if (dependency[i] != NON_DEP || registers[i] != 0) begin
-                        $fdisplay(file, "[%d] = [%d], RoB = ", i, registers[i]);
-                        if (dependency[i] != NON_DEP) begin
-                            $fdisplay(file, "[%d]", dependency[i]);
+                        if (dependency[i] == NON_DEP) begin
+                        $fdisplay(file, "x%h = [0x%h], RoB = NON_DEP", i, registers[i]);
+                        end else begin
+                            $fdisplay(file, "x%h = [0x%h], RoB = [%d]", i, registers[i], dependency[i]);
                         end
-                        else begin
-                            $fdisplay(file, "NON_DEP");
-                        end
-                        $fdisplay(file, " ");
                     end
                 end
                 $fdisplay(file, "\n");
                 $fclose(file);
             end
-            */
         end   
     end
 

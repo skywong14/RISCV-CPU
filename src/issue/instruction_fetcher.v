@@ -42,7 +42,8 @@ module Instruction_Fetcher #(
     input wire [RoB_WIDTH - 1 : 0] new_entry_index, // an empty RoB entry, but it will be issued by Dispatcher rather than IF
 
     input wire jalr_result_en, // ATTENTION: special case for jalr feedback, at this time state == WAITING_JALR
-    input wire [31 : 0] jalr_result,
+    input wire [31 : 0] jalr_result, // next pc
+    input wire flush_signal, // FLUSH signal from RoB
     input wire [31 : 0] correct_next_pc, // the correct next pc
 
     // with Dispatcher
@@ -85,24 +86,35 @@ module Instruction_Fetcher #(
 
     assign predict_query_pc = pc;
 
-    integer debug_counter, file;
-
     always @(posedge clk_in) begin
         if (rst_in) begin
-            debug_counter = 0;
             // reset
             state <= IDLE;
             pc <= 0;
             cur_instruction <= 0;
             icache_query_en <= 0;
             new_instruction_en <= 0;
+
+            icache_query_pc <= 0;
+            new_pc <= 0;
+            new_opcode <= 0;
+            new_rs1 <= 0;
+            new_rs2 <= 0;
+            new_rd <= 0;
+            new_imm <= 0;
             new_predict_result <= 0;
         end
         else if (!rdy_in) begin
             // pause
+        end if (flush_signal) begin
+            // flush
+            state <= IDLE;
+            pc <= correct_next_pc;
+            cur_instruction <= 0;
+            icache_query_en <= 0;
+            new_instruction_en <= 0;
         end
         else begin
-            debug_counter = debug_counter + 1;
             // run
             if (state == WAITING_JALR) begin
                 // waiting for jalr result
@@ -164,30 +176,6 @@ module Instruction_Fetcher #(
             end else begin
                 new_instruction_en <= 0;
             end
-
-            // debug, print like :
-            /* [debug_counter]: 
-             *      if (icache_en == 1) print "instruction = get [icache_data] at [icache_query_pc]"
-             *      if (new_instruction_en == 1) print "new instruction = [opcode] [new_rs1] [new_rs2] [new_rd] [new_imm] [new_predict_result(if branch)]"
-             */
-             /*
-            if (debug_counter <= 100) begin
-                file = $fopen("IF_debug.txt", "a");
-                $fdisplay(file, "[%d]: ", debug_counter);
-                if (icache_query_en) begin
-                    $fdisplay(file, "instruction = get %d at %d", icache_data, icache_query_pc);
-                end
-                if (new_instruction_en) begin
-                    case (new_opcode)
-                        jalr: $fdisplay(file, "new instruction = (jalr) %d %d %d %d", new_rs1, new_rs2, new_rd, new_imm);
-                        jal: $fdisplay(file, "new instruction = (jal) %d %d %d %d", new_rs1, new_rs2, new_rd, new_imm);
-                        beq, bne, blt, bge, bltu, bgeu: $fdisplay(file, "new instruction = (branch: %d) %d %d %d %d bp = %d", opcode, new_rs1, new_rs2, new_rd, new_imm, new_predict_result);
-                        default: $fdisplay(file, "new instruction = (other: %d) %d %d %d %d", opcode, new_rs1, new_rs2, new_rd, new_imm);
-                    endcase
-                end
-                $fclose(file);
-            end
-            */
         end
     end
 

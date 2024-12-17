@@ -59,6 +59,10 @@ wire RoB_isFull;
 wire [RoB_WIDTH - 1 : 0] RoB_newEntry_index;
 wire RoB_flush_signal;
 
+// debug info output by RoB
+wire RoB_debug_en;
+wire [31 : 0] RoB_debug_commit_id;
+
 // output by RS
 wire RS_RS_update_en;
 wire [RoB_WIDTH - 1 : 0] RS_RS_update_index;
@@ -165,6 +169,9 @@ RoB #(
   .new_entry_predict_result(Dispatcher_RoB_predict_result),
   .already_ready(Dispatcher_RoB_already_ready),
   .ready_data(Dispatcher_RoB_ready_data),
+
+  .debug_en(RoB_debug_en),
+  .debug_commit_id(RoB_debug_commit_id),
 
   .CDB_update_en(CDB_RoBEntry_update_en),
   .CDB_update_index(CDB_RoBEntry_update_index),
@@ -277,6 +284,7 @@ Instruction_Fetcher #(
   .new_entry_index(RoB_newEntry_index),
   .jalr_result_en(RoB_jalr_feedback_en),
   .jalr_result(RoB_jalr_feedback_data),
+  .flush_signal(RoB_flush_signal),
   .correct_next_pc(RoB_correct_next_pc),
   .new_instruction_able(Dispatcher_new_instruction_able),
   .new_instruction_en(IF_new_instruction_en),
@@ -341,6 +349,8 @@ RF #(
   .RoB_update_reg(RoB_RF_update_reg),
   .RoB_update_index(RoB_RF_update_index),
   .RoB_update_data(RoB_RF_update_data),
+  .debug_en(RoB_debug_en),
+  .debug_commit_id(RoB_debug_commit_id),
   .rs1(Dispatcher_RF_rs1),
   .rs2(Dispatcher_RF_rs2),
   .Qj(RF_Qj),

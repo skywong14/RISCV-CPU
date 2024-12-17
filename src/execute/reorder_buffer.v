@@ -69,6 +69,10 @@ module RoB #(
 
     input wire already_ready,
     input wire [31 : 0] ready_data,
+
+    // debug
+    output reg debug_en,
+    output reg [31 : 0] debug_commit_id,
     
     // with CDB
     input wire CDB_update_en,
@@ -125,6 +129,8 @@ module RoB #(
     assign isFull = (head_ptr == tail_ptr) && isBusy[head_ptr];
     assign new_entry_index = tail_ptr;
 
+    reg extra_wait;
+
     // for debug
     wire [2 : 0] debug_opType;
     wire [31 : 0] debug_data;
@@ -161,7 +167,9 @@ module RoB #(
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;
-
+            extra_wait <= 0;
+            
+            debug_en <= 0;
             commit_num <= 0;
 
             for (i = 0; i < RoB_SIZE; i = i + 1) begin
@@ -181,28 +189,34 @@ module RoB #(
             // pause
         end
         else if (flush_signal) begin
-            // flush
-            head_ptr <= 0;
-            tail_ptr <= 0;
+            // flush, wait an extra cycle
+            if (extra_wait) begin
+                extra_wait <= 0;
+                flush_signal <= 0;
+            end
+            else begin
+                extra_wait <= 1;
+                
+                head_ptr <= 0;
+                tail_ptr <= 0;
+                RF_update_en <= 0;
+                RF_update_reg <= 0;
+                jalr_feedback_en <= 0;
+                branch_fail_en <= 0;
+                branch_predictor_en <= 0;
 
-            flush_signal <= 0;
-            RF_update_en <= 0;
-            RF_update_reg <= 0;
-            jalr_feedback_en <= 0;
-            branch_fail_en <= 0;
-            branch_predictor_en <= 0;
-
-            for (i = 0; i < RoB_SIZE; i = i + 1) begin
-                isBusy[i] <= 0;
-                isReady[i] <= 0;
-                opType[i] <= EMPTY;
-                rd[i] <= 0;
-                pc[i] <= 0;
-                next_pc[i] <= 0;
-                predict_result[i] <= 0;
-                data[i] <= 0;
-                extra_data[i] <= 0;
-                opcode[i] <= 0;
+                for (i = 0; i < RoB_SIZE; i = i + 1) begin
+                    isBusy[i] <= 0;
+                    isReady[i] <= 0;
+                    opType[i] <= EMPTY;
+                    rd[i] <= 0;
+                    pc[i] <= 0;
+                    next_pc[i] <= 0;
+                    predict_result[i] <= 0;
+                    data[i] <= 0;
+                    extra_data[i] <= 0;
+                    opcode[i] <= 0;
+                end
             end
         end
         else begin
@@ -213,6 +227,7 @@ module RoB #(
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;
+            debug_en <= 0;
 
             // get new entry
             if (!isFull && new_entry_en) begin
@@ -310,11 +325,13 @@ module RoB #(
 
 
                 // debug, print commit info
-                /*
+                
                 commit_num <= commit_num + 1;
-                if (commit_num <= 1000) begin
+                if (commit_num <= 2000) begin
+                    debug_en <= 1;
+                    debug_commit_id <= commit_num;
                     file = $fopen("RoB_debug.txt", "a");
-                    $fdisplay(file, "[%d]: ", commit_num);
+                    $fdisplay(file, "commit_id = [%d]: ", commit_num);
                     // print the string of opcode
                     case (debug_opcode)
                         lui: $fdisplay(file, "lui");
@@ -359,7 +376,7 @@ module RoB #(
                     $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = %d, next_pc = %d, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
                     $fclose(file);
                 end
-                */
+                
             end
         end
     end
