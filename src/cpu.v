@@ -56,7 +56,7 @@ wire RoB_branch_fail_en;
 wire [31 : 0] RoB_correct_next_pc;
 wire RoB_branch_predictor_en;
 wire RoB_isFull;
-wire [RoB_WIDTH - 1 : 0] RoB_new_entry_index;
+wire [RoB_WIDTH - 1 : 0] RoB_newEntry_index;
 wire RoB_flush_signal;
 
 // output by RS
@@ -182,7 +182,7 @@ RoB #(
   .branch_predictor_pc(IF_predict_query_pc),
   .branch_predictor_result(branch_predictor_result_out),
   .isFull(RoB_isFull),
-  .new_entry_index(RoB_new_entry_index),
+  .new_entry_index(RoB_newEntry_index),
   .flush_signal(RoB_flush_signal)
 );
 
@@ -241,7 +241,7 @@ Dispatcher #(
   .LSB_isFull(LSB_isFull),
 
   .RoB_isFull(RoB_isFull),
-  .RoB_newEntryIndex(RoB_new_entry_index),
+  .RoB_newEntryIndex(RoB_newEntry_index),
   .RoB_flush_signal(RoB_flush_signal),
   .RoB_newEntry_en(Dispatcher_RoB_newEntry_en),
   .RoB_opcode(Dispatcher_RoB_opcode),
@@ -274,7 +274,7 @@ Instruction_Fetcher #(
   .icache_data_en(icache_IF_dout_en),
   .icache_data(icache_IF_dout),
   .rob_isFull(RoB_isFull),
-  .new_entry_index(RoB_new_entry_index),
+  .new_entry_index(RoB_newEntry_index),
   .jalr_result_en(RoB_jalr_feedback_en),
   .jalr_result(RoB_jalr_feedback_data),
   .correct_next_pc(RoB_correct_next_pc),
@@ -381,15 +381,15 @@ LSB #(
   .mem_data_width(LSB_mem_data_width),
   .mem_query_data(LSB_mem_query_data),
 
-  .new_entry_en(Dispatcher_RS_new_Entry_en),
-  .new_entry_RoBIndex(Dispatcher_RS_robEntry),
-  .new_entry_opcode(Dispatcher_RS_opcode),
-  .new_entry_Vj(Dispatcher_RS_Vj),
-  .new_entry_Vk(Dispatcher_RS_Vk),
-  .new_entry_Qj(Dispatcher_RS_Qj),
-  .new_entry_Qk(Dispatcher_RS_Qk),
-  .new_entry_imm(Dispatcher_RS_imm),
-  .new_entry_pc(Dispatcher_RS_pc),
+  .new_entry_en(Dispatcher_LSB_newEntry_en),
+  .new_entry_RoBIndex(Dispatcher_LSB_RoBIndex),
+  .new_entry_opcode(Dispatcher_LSB_opcode),
+  .new_entry_Vj(Dispatcher_LSB_Vj),
+  .new_entry_Vk(Dispatcher_LSB_Vk),
+  .new_entry_Qj(Dispatcher_LSB_Qj),
+  .new_entry_Qk(Dispatcher_LSB_Qk),
+  .new_entry_imm(Dispatcher_LSB_imm),
+  .new_entry_pc(Dispatcher_LSB_pc),
 
   .RoB_update_en(CDB_RoBEntry_update_en),
   .RoB_update_index(CDB_RoBEntry_update_index),
@@ -398,7 +398,7 @@ LSB #(
   .RoB_write_index(LSB_RoB_write_index),
   .RoB_write_data(LSB_RoB_write_data),
 
-  .RoB_headIndex(RoB_new_entry_index),
+  .RoB_headIndex(RoB_newEntry_index),
   .lstCommittedWrite(LSB_lstCommittedWrite),
   .flush_signal(RoB_flush_signal),
   .isFull(LSB_isFull)

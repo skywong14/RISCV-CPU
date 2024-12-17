@@ -111,6 +111,24 @@ module LSB #(
 
     integer i;
 
+    // for debug
+    wire debug_isReady;
+    wire [RoB_WIDTH : 0] debug_Qj, debug_Qk;
+    wire [RoB_WIDTH - 1 : 0] debug_RoBEntry;
+    wire [31 : 0] debug_Vj, debug_Vk;
+    wire [1 : 0] debug_data_width;
+    wire [31 : 0] debug_imm;
+    wire debug_op_type;
+    assign debug_isReady = isReady[head_ptr];
+    assign debug_Qj = Qj[head_ptr];
+    assign debug_Qk = Qk[head_ptr];
+    assign debug_RoBEntry = RoBEntry[head_ptr];
+    assign debug_Vj = Vj[head_ptr];
+    assign debug_Vk = Vk[head_ptr];
+    assign debug_data_width = data_width[head_ptr];
+    assign debug_imm = imm[head_ptr];
+    assign debug_op_type = op_type[head_ptr];
+
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset

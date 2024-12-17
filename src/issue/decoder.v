@@ -71,16 +71,17 @@ module Decoder #(
     assign opcode_part = instruction[6 : 0];
     assign funct3_part = instruction[14 : 12];
     assign funct7_part = instruction[31 : 25];
-    assign rs1 = instruction[11 : 7];
-    assign rs2 = instruction[19 : 15];
-    assign rd = instruction[24 : 20];
-    assign imm = (opcode_part == 7'b0110111 || opcode_part == 7'b0010111) ? {instruction[31 : 12], 12'b0} :
-                (opcode_part == 7'b1101111) ? {{12{instruction[31]}}, instruction[19 : 12], instruction[20], instruction[30 : 21], 1'b0} :
-                (opcode_part == 7'b1100111) ? {{21{instruction[31]}}, instruction[30 : 20]} :
-                (opcode_part == 7'b1100011) ? {{20{instruction[31]}}, instruction[7], instruction[30 : 25], instruction[11 : 8], 1'b0} :
-                (opcode_part == 7'b0000011 || opcode_part == 7'b0100011) ? {{21{instruction[31]}}, instruction[30 : 20]} :
-                (opcode_part == 7'b0010011) ? {{21{instruction[31]}}, instruction[30 : 20]} :
-                (opcode_part == 7'b0110011) ? {{27'b0}, instruction[24 : 20]} :
+    assign rs1 = instruction[19 : 15];
+    assign rs2 = instruction[24 : 20];
+    assign rd = instruction[11 : 7];
+    assign imm = (opcode_part == 7'b0110111 || opcode_part == 7'b0010111) ? {instruction[31 : 12], 12'b0} : // lui, auipc
+                (opcode_part == 7'b1101111) ? {{12{instruction[31]}}, instruction[19 : 12], instruction[20], instruction[30 : 21], 1'b0} : // jal
+                (opcode_part == 7'b1100111) ? {{21{instruction[31]}}, instruction[30 : 20]} : // jalr
+                (opcode_part == 7'b1100011) ? {{20{instruction[31]}}, instruction[7], instruction[30 : 25], instruction[11 : 8], 1'b0} :  // B type
+                (opcode_part == 7'b0000011) ? {{21{instruction[31]}}, instruction[30:20]} : // L type
+                (opcode_part == 7'b0100011) ? {{21{instruction[31]}}, instruction[30 : 25], instruction[11:7]} : // S type
+                (opcode_part == 7'b0010011) ? {{21{instruction[31]}}, instruction[30 : 20]} : // I type
+                (opcode_part == 7'b0110011) ? {{27'b0}, instruction[24 : 20]} : // R type
                 32'b0;
     assign opcode = (opcode_part == 7'b0110111) ? lui :
                     (opcode_part == 7'b0010111) ? auipc :

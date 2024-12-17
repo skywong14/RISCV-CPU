@@ -126,26 +126,26 @@ module RoB #(
     assign new_entry_index = tail_ptr;
 
     // for debug
-    wire [2 : 0] opType_debug;
-    wire [31 : 0] data_debug;
-    wire [31 : 0] extra_data_debug;
-    wire [31 : 0] pc_debug;
-    wire [31 : 0] next_pc_debug;
-    wire [31 : 0] predict_result_debug;
-    wire [6 : 0] opcode_debug;
-    wire [31 : 0] rd_debug;
-    wire isReady_debug;
-    wire isBusy_debug;
-    assign opType_debug = opType[head_ptr];
-    assign data_debug = data[head_ptr];
-    assign extra_data_debug = extra_data[head_ptr];
-    assign pc_debug = pc[head_ptr];
-    assign next_pc_debug = next_pc[head_ptr];
-    assign predict_result_debug = predict_result[head_ptr];
-    assign opcode_debug = opcode[head_ptr];
-    assign rd_debug = rd[head_ptr];
-    assign isBusy_debug = isBusy[head_ptr];
-    assign isReady_debug = isReady[head_ptr];
+    wire [2 : 0] debug_opType;
+    wire [31 : 0] debug_data;
+    wire [31 : 0] debug_extra_data;
+    wire [31 : 0] debug_pc;
+    wire [31 : 0] debug_next_pc;
+    wire [31 : 0] debug_predict_result;
+    wire [6 : 0] debug_opcode;
+    wire [31 : 0] debug_rd;
+    wire debug_isReady;
+    wire debug_isBusy;
+    assign debug_opType = opType[head_ptr];
+    assign debug_data = data[head_ptr];
+    assign debug_extra_data = extra_data[head_ptr];
+    assign debug_pc = pc[head_ptr];
+    assign debug_next_pc = next_pc[head_ptr];
+    assign debug_predict_result = predict_result[head_ptr];
+    assign debug_opcode = opcode[head_ptr];
+    assign debug_rd = rd[head_ptr];
+    assign debug_isBusy = isBusy[head_ptr];
+    assign debug_isReady = isReady[head_ptr];
 
     // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
