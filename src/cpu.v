@@ -54,7 +54,9 @@ wire RoB_jalr_feedback_en;
 wire [31 : 0] RoB_jalr_feedback_data;
 wire RoB_branch_fail_en;
 wire [31 : 0] RoB_correct_next_pc;
-wire RoB_branch_predictor_en;
+wire RoB_bp_update_en;
+wire [31 : 0] RoB_bp_update_pc;
+wire RoB_bp_update_result;
 wire RoB_isFull;
 wire [RoB_WIDTH - 1 : 0] RoB_newEntry_index;
 wire RoB_flush_signal;
@@ -71,7 +73,7 @@ wire RS_isEmpty;
 wire RS_isFull;
 
 // output by Branch_Predictor
-wire branch_predictor_result_out;
+wire bp_result_out;
 
 // output by Dispatcher
 wire Dispatcher_new_instruction_able;
@@ -123,6 +125,7 @@ wire [4 : 0] IF_new_rd;
 wire [31 : 0] IF_new_imm;
 wire IF_new_predict_result;
 wire [31 : 0] IF_predict_query_pc;
+wire IF_branch_predictor_query_en;
 
 // output by icache
 wire icache_MC_query_en;
@@ -185,9 +188,9 @@ RoB #(
   .jalr_feedback_data(RoB_jalr_feedback_data),
   .branch_fail_en(RoB_branch_fail_en),
   .correct_next_pc(RoB_correct_next_pc),
-  .branch_predictor_en(RoB_branch_predictor_en),
-  .branch_predictor_pc(IF_predict_query_pc),
-  .branch_predictor_result(branch_predictor_result_out),
+  .bp_update_en(RoB_bp_update_en),
+  .bp_update_pc(RoB_bp_update_pc),
+  .bp_update_result(RoB_bp_update_result),
   .isFull(RoB_isFull),
   .new_entry_index(RoB_newEntry_index),
   .flush_signal(RoB_flush_signal)
@@ -199,11 +202,12 @@ Branch_Predictor #(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
-  .update_en(RoB_branch_predictor_en),
-  .update_PC(IF_predict_query_pc),
-  .update_result(RoB_branch_predictor_en),
+  .update_en(RoB_bp_update_en),
+  .update_PC(RoB_bp_update_pc),
+  .update_result(RoB_bp_update_result),
+  .query_en(IF_branch_predictor_query_en),
   .query_PC(IF_predict_query_pc),
-  .result_out(branch_predictor_result_out)
+  .result_out(bp_result_out)
 );
 
 Dispatcher #(
@@ -295,9 +299,9 @@ Instruction_Fetcher #(
   .new_rd(IF_new_rd),
   .new_imm(IF_new_imm),
   .new_predict_result(IF_new_predict_result),
+  .branch_predictor_query_en(IF_branch_predictor_query_en),
   .predict_query_pc(IF_predict_query_pc),
-  .predict_result_en(branch_predictor_result_out),
-  .predict_result(branch_predictor_result_out)
+  .predict_result(bp_result_out)
 );
 
 ICache #(

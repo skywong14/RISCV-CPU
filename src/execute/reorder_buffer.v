@@ -93,9 +93,9 @@ module RoB #(
     output reg [31 : 0] correct_next_pc,
 
     // notify branch predictor
-    output reg branch_predictor_en,
-    output reg [31 : 0] branch_predictor_pc,
-    output reg branch_predictor_result,
+    output reg bp_update_en,
+    output reg [31 : 0] bp_update_pc,
+    output reg bp_update_result,
 
     // self state
     output wire isFull,
@@ -166,11 +166,11 @@ module RoB #(
             RF_update_reg <= 0;
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
-            branch_predictor_en <= 0;
+            bp_update_en <= 0;
             extra_wait <= 0;
             
             debug_en <= 0;
-            commit_num <= 0;
+            commit_num <= 1;
 
             for (i = 0; i < RoB_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
@@ -203,7 +203,7 @@ module RoB #(
                 RF_update_reg <= 0;
                 jalr_feedback_en <= 0;
                 branch_fail_en <= 0;
-                branch_predictor_en <= 0;
+                bp_update_en <= 0;
 
                 for (i = 0; i < RoB_SIZE; i = i + 1) begin
                     isBusy[i] <= 0;
@@ -226,7 +226,7 @@ module RoB #(
             RF_update_reg <= 0;
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
-            branch_predictor_en <= 0;
+            bp_update_en <= 0;
             debug_en <= 0;
 
             // get new entry
@@ -290,9 +290,9 @@ module RoB #(
                             end
                         end 
                         // branch_predictor update
-                        branch_predictor_en <= 1;
-                        branch_predictor_pc <= pc[head_ptr];
-                        branch_predictor_result <= data[head_ptr];
+                        bp_update_en <= 1;
+                        bp_update_pc <= pc[head_ptr];
+                        bp_update_result <= data[head_ptr];
                     end
                     JALR: begin
                         // write back to RF
@@ -373,7 +373,7 @@ module RoB #(
                         andr: $fdisplay(file, "andr");
                         default: $fdisplay(file, "unknown");
                     endcase
-                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = %d, next_pc = %d, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
+                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = %d, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
                     $fclose(file);
                 end
                 

@@ -59,8 +59,8 @@ module Instruction_Fetcher #(
     output reg new_predict_result,
 
     // with Branch_Predictor
-    output wire [31 : 0] predict_query_pc,
-    input wire predict_result_en,
+    output reg branch_predictor_query_en,
+    output reg [31 : 0] predict_query_pc,
     input wire predict_result // 0: not jump, 1: jump
 );
     reg [1 : 0] state;
@@ -84,8 +84,6 @@ module Instruction_Fetcher #(
         .imm(imm)
     );
 
-    assign predict_query_pc = pc;
-
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
@@ -103,6 +101,7 @@ module Instruction_Fetcher #(
             new_rd <= 0;
             new_imm <= 0;
             new_predict_result <= 0;
+            branch_predictor_query_en <= 0;
         end
         else if (!rdy_in) begin
             // pause
@@ -138,6 +137,9 @@ module Instruction_Fetcher #(
                 icache_query_en <= 1;
                 icache_query_pc <= pc;
                 state <= WAITING_ICACHE;
+
+                branch_predictor_query_en <= 1;
+                predict_query_pc <= pc;
             end
             else if (state == ISSUING && new_instruction_able) begin
                 // pc and instruction are ready
@@ -173,6 +175,8 @@ module Instruction_Fetcher #(
                 new_rd <= rd;
                 new_imm <= imm;
                 new_predict_result <= predict_result;
+
+                branch_predictor_query_en <= 0;
             end else begin
                 new_instruction_en <= 0;
             end

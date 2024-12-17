@@ -20,12 +20,23 @@ module Branch_Predictor #(
     input wire update_result, // 0: not jump, 1: jump
 
     // with IF
+    input wire query_en,
     input wire [31 : 0] query_PC,
-    output wire result_out // 0: not jump, 1: jump
+    output reg result_out // 0: not jump, 1: jump
 );
     reg [1 : 0] regList[SIZE - 1 : 0];
 
-    assign result_out = regList[query_PC[BP_WIDTH + 1 : 2]][1];
+    wire [BP_WIDTH - 1 : 0] valid_part;
+    assign valid_part = query_PC[BP_WIDTH : 1];
+
+    always@(*) begin
+            result_out = regList[valid_part][1];
+        // if (query_en) begin 
+            // result_out = regList[valid_part][1];
+        // end else begin
+            // result_out = 1'b0;
+        // end
+    end
 
     integer i;
 
@@ -54,6 +65,10 @@ module Branch_Predictor #(
                         regList[update_PC[BP_WIDTH + 1 : 2]] <= regList[update_PC[BP_WIDTH + 1 : 2]] - 1;
                     end
                 end
+            end
+
+            if (query_en) begin
+                result_out <= regList[valid_part][1];
             end
         end
     end
