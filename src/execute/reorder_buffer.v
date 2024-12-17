@@ -146,6 +146,7 @@ module RoB #(
     assign debug_rd = rd[head_ptr];
     assign debug_isBusy = isBusy[head_ptr];
     assign debug_isReady = isReady[head_ptr];
+    integer commit_num, file;
 
     // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
@@ -160,6 +161,8 @@ module RoB #(
             jalr_feedback_en <= 0;
             branch_fail_en <= 0;
             branch_predictor_en <= 0;
+
+            commit_num <= 0;
 
             for (i = 0; i < RoB_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
@@ -304,6 +307,59 @@ module RoB #(
                 data[head_ptr] <= 0;
                 extra_data[head_ptr] <= 0;
                 opcode[head_ptr] <= 0;
+
+
+                // debug, print commit info
+                /*
+                commit_num <= commit_num + 1;
+                if (commit_num <= 1000) begin
+                    file = $fopen("RoB_debug.txt", "a");
+                    $fdisplay(file, "[%d]: ", commit_num);
+                    // print the string of opcode
+                    case (debug_opcode)
+                        lui: $fdisplay(file, "lui");
+                        auipc: $fdisplay(file, "auipc");
+                        jal: $fdisplay(file, "jal");
+                        jalr: $fdisplay(file, "jalr");
+                        beq: $fdisplay(file, "beq");
+                        bne: $fdisplay(file, "bne");
+                        blt: $fdisplay(file, "blt");
+                        bge: $fdisplay(file, "bge");
+                        bltu: $fdisplay(file, "bltu");
+                        bgeu: $fdisplay(file, "bgeu");
+                        lb: $fdisplay(file, "lb");
+                        lh: $fdisplay(file, "lh");
+                        lw: $fdisplay(file, "lw");
+                        lbu: $fdisplay(file, "lbu");
+                        lhu: $fdisplay(file, "lhu");
+                        sb: $fdisplay(file, "sb");
+                        sh: $fdisplay(file, "sh");
+                        sw: $fdisplay(file, "sw");
+                        addi: $fdisplay(file, "addi");
+                        slti: $fdisplay(file, "slti");
+                        sltiu: $fdisplay(file, "sltiu");
+                        xori: $fdisplay(file, "xori");
+                        ori: $fdisplay(file, "ori");
+                        andi: $fdisplay(file, "andi");
+                        slli: $fdisplay(file, "slli");
+                        srli: $fdisplay(file, "srli");
+                        srai: $fdisplay(file, "srai");
+                        add: $fdisplay(file, "add");
+                        sub: $fdisplay(file, "sub");
+                        sll: $fdisplay(file, "sll");
+                        slt: $fdisplay(file, "slt");
+                        sltu: $fdisplay(file, "sltu");
+                        xorr: $fdisplay(file, "xorr");
+                        srl: $fdisplay(file, "srl");
+                        sra: $fdisplay(file, "sra");
+                        orr: $fdisplay(file, "orr");
+                        andr: $fdisplay(file, "andr");
+                        default: $fdisplay(file, "unknown");
+                    endcase
+                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = %d, next_pc = %d, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
+                    $fclose(file);
+                end
+                */
             end
         end
     end

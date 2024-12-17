@@ -136,29 +136,26 @@ module Instruction_Fetcher #(
                     end
                     jal: begin
                         pc <= pc + imm;
-                        new_pc <= pc + imm;
                         state <= IDLE;
                     end
                     beq, bne, blt, bge, bltu, bgeu: begin
                         if (predict_result) begin
                             pc <= pc + imm;
-                            new_pc <= pc + imm;
                         end
                         else begin
                             pc <= pc + 4;
-                            new_pc <= pc + 4;
                         end
                         state <= IDLE;
                     end
                     default: begin
                         pc <= pc + 4;
-                        new_pc <= pc + 4;
                         state <= IDLE;
                     end
                 endcase
                 // issue the instruction to Dispatcher
                 new_instruction_en <= 1;
                 new_opcode <= opcode;
+                new_pc <= pc;
                 new_rs1 <= rs1;
                 new_rs2 <= rs2;
                 new_rd <= rd;
@@ -173,6 +170,7 @@ module Instruction_Fetcher #(
              *      if (icache_en == 1) print "instruction = get [icache_data] at [icache_query_pc]"
              *      if (new_instruction_en == 1) print "new instruction = [opcode] [new_rs1] [new_rs2] [new_rd] [new_imm] [new_predict_result(if branch)]"
              */
+             /*
             if (debug_counter <= 100) begin
                 file = $fopen("IF_debug.txt", "a");
                 $fdisplay(file, "[%d]: ", debug_counter);
@@ -189,6 +187,7 @@ module Instruction_Fetcher #(
                 end
                 $fclose(file);
             end
+            */
         end
     end
 

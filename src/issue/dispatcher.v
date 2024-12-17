@@ -201,7 +201,7 @@ module Dispatcher #(
                         RoB_opcode <= jal;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + (new_imm << 1);
+                        RoB_next_pc <= new_pc + new_imm;
                         RoB_predict_result <= 0;
                     end
                     jalr: begin
