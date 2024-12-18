@@ -117,6 +117,7 @@ module Instruction_Fetcher #(
             // run
             if (state == WAITING_JALR) begin
                 // waiting for jalr result
+                new_instruction_en <= 0;
                 if (jalr_result_en) begin
                     pc <= jalr_result;
                     state <= IDLE;
@@ -124,6 +125,7 @@ module Instruction_Fetcher #(
             end
             else if (state == WAITING_ICACHE) begin
                 // waiting
+                new_instruction_en <= 0;
                 if (icache_data_en) begin
                     cur_instruction <= icache_data;
                     state <= ISSUING;

@@ -125,7 +125,7 @@ module Dispatcher #(
         || new_opcode == addi || new_opcode == slti || new_opcode == sltiu || new_opcode == xori || new_opcode == ori
         || new_opcode == andi || new_opcode == slli || new_opcode == srli || new_opcode == srai) ? 0 : new_rs2;
 
-    assign new_instruction_able = (!RoB_isFull) && (!RS_isFull) && (!LSB_isFull);
+    assign new_instruction_able = (!RoB_isFull) && (!RS_isFull) && (!LSB_isFull) && (!RoB_flush_signal);
 
     always @(posedge clk_in) begin
         if (rst_in) begin

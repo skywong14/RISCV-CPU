@@ -52,7 +52,6 @@ wire [RoB_WIDTH - 1 : 0] RoB_RF_update_index;
 wire [31 : 0] RoB_RF_update_data;
 wire RoB_jalr_feedback_en;
 wire [31 : 0] RoB_jalr_feedback_data;
-wire RoB_branch_fail_en;
 wire [31 : 0] RoB_correct_next_pc;
 wire RoB_bp_update_en;
 wire [31 : 0] RoB_bp_update_pc;
@@ -186,7 +185,6 @@ RoB #(
   .RF_update_data(RoB_RF_update_data),
   .jalr_feedback_en(RoB_jalr_feedback_en),
   .jalr_feedback_data(RoB_jalr_feedback_data),
-  .branch_fail_en(RoB_branch_fail_en),
   .correct_next_pc(RoB_correct_next_pc),
   .bp_update_en(RoB_bp_update_en),
   .bp_update_pc(RoB_bp_update_pc),
@@ -317,7 +315,8 @@ ICache #(
   .IF_query_en(IF_icache_query_en),
   .IF_query_addr(IF_icache_query_pc),
   .IF_dout_en(icache_IF_dout_en),
-  .IF_dout(icache_IF_dout)
+  .IF_dout(icache_IF_dout),
+  .flush_signal(RoB_flush_signal)
 );
 
 Memory_Controller Memory_Controller_module (
@@ -339,7 +338,8 @@ Memory_Controller Memory_Controller_module (
   .LSB_data_width(LSB_mem_data_width),
   .LSB_query_data(LSB_mem_query_data),
   .LSB_result_en(MC_LSB_result_en),
-  .LSB_result_data(MC_LSB_result_data)
+  .LSB_result_data(MC_LSB_result_data),
+  .flush_signal(RoB_flush_signal)
 );
 
 RF #(

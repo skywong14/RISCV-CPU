@@ -89,7 +89,6 @@ module RoB #(
     output reg jalr_feedback_en,
     output reg [31 : 0] jalr_feedback_data,
 
-    output reg branch_fail_en,
     output reg [31 : 0] correct_next_pc,
 
     // notify branch predictor
@@ -165,7 +164,6 @@ module RoB #(
             RF_update_en <= 0;
             RF_update_reg <= 0;
             jalr_feedback_en <= 0;
-            branch_fail_en <= 0;
             bp_update_en <= 0;
             extra_wait <= 0;
             
@@ -202,7 +200,6 @@ module RoB #(
                 RF_update_en <= 0;
                 RF_update_reg <= 0;
                 jalr_feedback_en <= 0;
-                branch_fail_en <= 0;
                 bp_update_en <= 0;
 
                 for (i = 0; i < RoB_SIZE; i = i + 1) begin
@@ -225,7 +222,6 @@ module RoB #(
             RF_update_en <= 0;
             RF_update_reg <= 0;
             jalr_feedback_en <= 0;
-            branch_fail_en <= 0;
             bp_update_en <= 0;
             debug_en <= 0;
 
@@ -277,12 +273,12 @@ module RoB #(
                         RF_update_data <= data[head_ptr];
                     end
                     BRANCH: begin
+                        // predict_result: 1 jump, 0 not jump
                         if (data[head_ptr] != predict_result[head_ptr]) begin
                             // FLUSH
                             flush_signal <= 1;
                             // tell IF to jump to correct_next_pc
-                            branch_fail_en <= 1;
-                            if (opcode[head_ptr] == beq || opcode[head_ptr] == bne) begin
+                            if (data[head_ptr]) begin
                                 correct_next_pc <= next_pc[head_ptr];
                             end
                             else begin
@@ -325,7 +321,7 @@ module RoB #(
 
 
                 // debug, print commit info
-                
+                /*
                 commit_num <= commit_num + 1;
                 if (commit_num <= 2000) begin
                     debug_en <= 1;
@@ -373,10 +369,10 @@ module RoB #(
                         andr: $fdisplay(file, "andr");
                         default: $fdisplay(file, "unknown");
                     endcase
-                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = %d, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
+                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = 0x%h, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
                     $fclose(file);
                 end
-                
+                */
             end
         end
     end

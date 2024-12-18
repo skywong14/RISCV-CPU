@@ -37,7 +37,10 @@ module Memory_Controller #(
     input wire [1 : 0] LSB_data_width, // 0:byte, 1:halfword, 2:word (1/2/4 bytes)
     input wire [31 : 0] LSB_query_data, // data to write
     output reg LSB_result_en, // 1 if read data is ready, or write data is written
-    output reg [31 : 0] LSB_result_data // read data
+    output reg [31 : 0] LSB_result_data, // read data
+
+    // flush signal
+    input wire flush_signal
 );
 
     reg [1 : 0] state;
@@ -74,6 +77,18 @@ module Memory_Controller #(
         end
         else if (!rdy_in) begin
             // pause
+        end if (flush_signal) begin
+            // flush
+            state <= IDLE;
+            last_module <= 0;
+            LSB_result_en <= 0;
+            LSB_result_data <= 0;
+            uart_state <= 0;
+            ram_addr_in <= 0;
+            icache_block_en <= 0;
+            ram_query_type <= 1;
+            ram_dout <= 0;
+            wait_to_comfirm <= 0;
         end
         else begin
             // run
@@ -99,7 +114,7 @@ module Memory_Controller #(
                         end
                         state <= LSB_WRITING;
                         w_data <= LSB_query_data;
-                        w_cur <= 0;
+                        w_cur <= 1;
                         w_length <= 1 << LSB_data_width;
                         ram_query_type <= 0;
                         ram_addr_in <= LSB_query_addr;
@@ -115,6 +130,7 @@ module Memory_Controller #(
                         r_length <= 1 << LSB_data_width;
                         ram_query_type <= 1;
                         ram_addr_in <= LSB_query_addr;
+                        LSB_result_data <= 0;
                     end
                 end 
                 else if (icache_query_en) begin

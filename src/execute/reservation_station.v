@@ -188,12 +188,12 @@ module Reservation_Station #(
                 case (opcode[ready_pos])
                     jalr: RS_update_data <= (Vj[ready_pos] + imm[ready_pos]) & ~1;
 
-                    beq: RS_update_data <= (Vj[ready_pos] == Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
-                    bne: RS_update_data <= (Vj[ready_pos] != Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
-                    blt: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
-                    bge: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
-                    bltu: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
-                    bgeu: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? pc[ready_pos] + imm[ready_pos] : pc[ready_pos] + 4;
+                    beq: RS_update_data <= (Vj[ready_pos] == Vk[ready_pos]) ? 1 : 0;
+                    bne: RS_update_data <= (Vj[ready_pos] != Vk[ready_pos]) ? 1 : 0;
+                    blt: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
+                    bge: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? 1 : 0;
+                    bltu: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
+                    bgeu: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? 1 : 0;
 
                     addi: RS_update_data <= Vj[ready_pos] + imm[ready_pos];
                     slti: RS_update_data <= (Vj[ready_pos] < imm[ready_pos]) ? 1 : 0;

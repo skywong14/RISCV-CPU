@@ -207,7 +207,7 @@ module LSB #(
                     end
                     lbu : begin
                         op_type[tail_ptr] <= 0;
-                        data_width[tail_ptr] <= 2;
+                        data_width[tail_ptr] <= 0;
                         extend_type[tail_ptr] <= 1;
                     end
                     lhu : begin

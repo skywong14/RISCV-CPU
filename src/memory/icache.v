@@ -29,7 +29,10 @@ module ICache #(
 
     // output to IF
     output reg IF_dout_en,
-    output reg [31 : 0] IF_dout
+    output reg [31 : 0] IF_dout,
+
+    // flush signal
+    input wire flush_signal
 );
 
     reg state;
@@ -38,7 +41,6 @@ module ICache #(
     reg [15 : 0] cache_block[CACHE_SIZE - 1 : 0]; // [15 : 0] in one block, 2 bytes
 
     integer i, j;
-    integer debug_counter, file;
 
     wire [CACHE_WIDTH - 1 : 0] left_index, right_index;
 
@@ -48,22 +50,27 @@ module ICache #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
-            debug_counter = 0;
             state <= IDLE;
+            IF_dout_en <= 0;
+            IF_dout <= 0;
+            MC_query_en <= 0;
+            MC_query_addr <= 0;
             for (i = 0; i < CACHE_SIZE; i = i + 1) begin
                 data_valid[i] <= 0;
             end
+        end
+        else if (!rdy_in) begin
+            // pause
+        end if (flush_signal) begin
+            // flush
+            state <= IDLE;
             IF_dout_en <= 0;
             IF_dout <= 0;
             MC_query_en <= 0;
             MC_query_addr <= 0;
         end
-        else if (!rdy_in) begin
-            // pause
-        end
         else begin
             // run
-            debug_counter = debug_counter + 1;
             if (state == IDLE) begin
                 // handle query from IF
                 IF_dout_en <= 0;
