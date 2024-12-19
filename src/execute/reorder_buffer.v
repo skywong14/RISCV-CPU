@@ -229,9 +229,8 @@ module RoB #(
     assign debug_3_rd = rd[3];
     assign debug_3_isBusy = isBusy[3];
     assign debug_3_isReady = isReady[3];
-
-    integer commit_num, file;
     */
+    integer commit_num, file;
     // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -247,7 +246,7 @@ module RoB #(
             extra_wait <= 0;
             
             debug_en <= 0;
-            // commit_num <= 1;
+            commit_num <= 1;
 
             isReady[NON_DEP] <= 0;
             data[NON_DEP] <= 0;
@@ -409,7 +408,7 @@ module RoB #(
                 // debug, print commit info
                 /*
                 commit_num <= commit_num + 1;
-                if (commit_num <= 10000) begin
+                if (commit_num <= 3000) begin
                     debug_en <= 1;
                     debug_commit_id <= commit_num;
                     file = $fopen("RoB_debug.txt", "a");

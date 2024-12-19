@@ -80,7 +80,10 @@ module Decoder #(
                 (opcode_part == 7'b1100011) ? {{20{instruction[31]}}, instruction[7], instruction[30 : 25], instruction[11 : 8], 1'b0} :  // B type
                 (opcode_part == 7'b0000011) ? {{21{instruction[31]}}, instruction[30:20]} : // L type
                 (opcode_part == 7'b0100011) ? {{21{instruction[31]}}, instruction[30 : 25], instruction[11:7]} : // S type
-                (opcode_part == 7'b0010011) ? {{21{instruction[31]}}, instruction[30 : 20]} : // I type
+                (opcode_part == 7'b0010011 && funct3_part != 3'b001 && funct3_part != 3'b101) ? {{21{instruction[31]}}, instruction[30 : 20]} : // I type(not slli, srli, srai)
+                (opcode_part == 7'b0010011 && funct3_part == 3'b001) ? {instruction[24 : 20]} : // slli
+                (opcode_part == 7'b0010011 && funct3_part == 3'b101) ? {instruction[24 : 20]} : // srli, srai
+                (opcode_part == 7'b0110011) ? {{21{instruction[31]}}, instruction[30 : 25], instruction[11 : 7]} : // R type
                 (opcode_part == 7'b0110011) ? {{27'b0}, instruction[24 : 20]} : // R type
                 32'b0;
     assign opcode = (opcode_part == 7'b0110111) ? lui :

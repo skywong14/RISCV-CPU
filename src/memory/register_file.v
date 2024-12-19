@@ -92,7 +92,7 @@ module RF #(
             end
 
             // debug
-            /*
+            
             if (debug_en) begin
                 file = $fopen("RF_debug.txt", "a");
                 $fdisplay(file, "commit_id = [%d]: ", debug_commit_id);
@@ -108,7 +108,7 @@ module RF #(
                 $fdisplay(file, "\n");
                 $fclose(file);
             end
-            */
+            
         end   
     end
 
