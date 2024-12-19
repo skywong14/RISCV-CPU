@@ -3,6 +3,7 @@
 module RoB #(
     parameter RoB_WIDTH = 3,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
+    parameter NON_DEP = 1 << RoB_WIDTH,
 
     // already decoded in Decoder/Dispatcher
     parameter lui = 7'd1,
@@ -66,18 +67,27 @@ module RoB #(
     input wire [31 : 0] new_entry_pc,
     input wire [31 : 0] new_entry_next_pc,
     input wire new_entry_predict_result,
-
     input wire already_ready,
     input wire [31 : 0] ready_data,
+
+    input wire [RoB_WIDTH : 0] query_Qj_index,
+    output wire query_Qj_isReady,
+    output wire [31 : 0] query_Qj_data,
+    input wire [RoB_WIDTH : 0] query_Qk_index,
+    output wire query_Qk_isReady,
+    output wire [31 : 0] query_Qk_data,
 
     // debug
     output reg debug_en,
     output reg [31 : 0] debug_commit_id,
     
     // with CDB
-    input wire CDB_update_en,
-    input wire [RoB_WIDTH - 1 : 0] CDB_update_index,
-    input wire [31 : 0] CDB_update_data,
+    input wire CDB_RS_update_en,
+    input wire [RoB_WIDTH - 1 : 0] CDB_RS_update_index,
+    input wire [31 : 0] CDB_RS_update_data,
+    input wire CDB_LSB_update_en,
+    input wire [RoB_WIDTH - 1 : 0] CDB_LSB_update_index,
+    input wire [31 : 0] CDB_LSB_update_data,
 
     // notify RF
     output reg RF_update_en,
@@ -98,7 +108,8 @@ module RoB #(
 
     // self state
     output wire isFull,
-    output wire [RoB_WIDTH - 1 : 0] new_entry_index, // the index of the new entry in RoB
+    output wire [RoB_WIDTH - 1 : 0] RoB_headIndex, // the head of RoB
+    output wire [RoB_WIDTH - 1 : 0] RoB_tailIndex, // the index of the new entry in RoB
     output reg flush_signal // high when predict goes wrong
 );
 
@@ -113,46 +124,114 @@ module RoB #(
  * JAL will be transformed to REGISTER in Dispatcher
  */
     reg isBusy[RoB_SIZE - 1 : 0];
-    reg isReady[RoB_SIZE - 1 : 0];
+    reg isReady[RoB_SIZE : 0];
     reg [2 : 0] opType[RoB_SIZE - 1 : 0];
     reg [6 : 0] opcode[RoB_SIZE - 1 : 0];
     reg [31 : 0] rd[RoB_SIZE - 1 : 0]; // also used as addr?
     reg [31 : 0] pc[RoB_SIZE - 1 : 0];
     reg [31 : 0] next_pc[RoB_SIZE - 1 : 0];
     reg predict_result[RoB_SIZE - 1 : 0];
-    reg [31 : 0] data[RoB_SIZE - 1 : 0];
+    reg [31 : 0] data[RoB_SIZE : 0];
     reg [31 : 0] extra_data[RoB_SIZE - 1 : 0];
 
     integer i, j;
 
     assign isFull = (head_ptr == tail_ptr) && isBusy[head_ptr];
-    assign new_entry_index = tail_ptr;
+    assign RoB_headIndex = head_ptr;
+    assign RoB_tailIndex = tail_ptr;
 
     reg extra_wait;
 
-    // for debug
-    wire [2 : 0] debug_opType;
-    wire [31 : 0] debug_data;
-    wire [31 : 0] debug_extra_data;
-    wire [31 : 0] debug_pc;
-    wire [31 : 0] debug_next_pc;
-    wire [31 : 0] debug_predict_result;
-    wire [6 : 0] debug_opcode;
-    wire [31 : 0] debug_rd;
-    wire debug_isReady;
-    wire debug_isBusy;
-    assign debug_opType = opType[head_ptr];
-    assign debug_data = data[head_ptr];
-    assign debug_extra_data = extra_data[head_ptr];
-    assign debug_pc = pc[head_ptr];
-    assign debug_next_pc = next_pc[head_ptr];
-    assign debug_predict_result = predict_result[head_ptr];
-    assign debug_opcode = opcode[head_ptr];
-    assign debug_rd = rd[head_ptr];
-    assign debug_isBusy = isBusy[head_ptr];
-    assign debug_isReady = isReady[head_ptr];
-    integer commit_num, file;
+    assign query_Qj_isReady = isReady[query_Qj_index];
+    assign query_Qj_data = data[query_Qj_index];
+    assign query_Qk_isReady = isReady[query_Qk_index];
+    assign query_Qk_data = data[query_Qk_index];
 
+    // for debug
+    /*
+    wire [2 : 0] debug_0_opType;
+    wire [31 : 0] debug_0_data;
+    wire [31 : 0] debug_0_extra_data;
+    wire [31 : 0] debug_0_pc;
+    wire [31 : 0] debug_0_next_pc;
+    wire [31 : 0] debug_0_predict_result;
+    wire [6 : 0] debug_0_opcode;
+    wire [31 : 0] debug_0_rd;
+    wire debug_0_isReady;
+    wire debug_0_isBusy;
+    assign debug_0_opType = opType[0];
+    assign debug_0_data = data[0];
+    assign debug_0_extra_data = extra_data[0];
+    assign debug_0_pc = pc[0];
+    assign debug_0_next_pc = next_pc[0];
+    assign debug_0_predict_result = predict_result[0];
+    assign debug_0_opcode = opcode[0];
+    assign debug_0_rd = rd[0];
+    assign debug_0_isBusy = isBusy[0];
+    assign debug_0_isReady = isReady[0];
+    wire [2 : 0] debug_1_opType;
+    wire [31 : 0] debug_1_data;
+    wire [31 : 0] debug_1_extra_data;
+    wire [31 : 0] debug_1_pc;
+    wire [31 : 0] debug_1_next_pc;
+    wire [31 : 0] debug_1_predict_result;
+    wire [6 : 0] debug_1_opcode;
+    wire [31 : 0] debug_1_rd;
+    wire debug_1_isReady;
+    wire debug_1_isBusy;
+    assign debug_1_opType = opType[1];
+    assign debug_1_data = data[1];
+    assign debug_1_extra_data = extra_data[1];
+    assign debug_1_pc = pc[1];
+    assign debug_1_next_pc = next_pc[1];
+    assign debug_1_predict_result = predict_result[1];
+    assign debug_1_opcode = opcode[1];
+    assign debug_1_rd = rd[1];
+    assign debug_1_isBusy = isBusy[1];
+    assign debug_1_isReady = isReady[1];
+    wire [2 : 0] debug_2_opType;
+    wire [31 : 0] debug_2_data;
+    wire [31 : 0] debug_2_extra_data;
+    wire [31 : 0] debug_2_pc;
+    wire [31 : 0] debug_2_next_pc;
+    wire [31 : 0] debug_2_predict_result;
+    wire [6 : 0] debug_2_opcode;
+    wire [31 : 0] debug_2_rd;
+    wire debug_2_isReady;
+    wire debug_2_isBusy;
+    assign debug_2_opType = opType[2];
+    assign debug_2_data = data[2];
+    assign debug_2_extra_data = extra_data[2];
+    assign debug_2_pc = pc[2];
+    assign debug_2_next_pc = next_pc[2];
+    assign debug_2_predict_result = predict_result[2];
+    assign debug_2_opcode = opcode[2];
+    assign debug_2_rd = rd[2];
+    assign debug_2_isBusy = isBusy[2];
+    assign debug_2_isReady = isReady[2];
+    wire [2 : 0] debug_3_opType;
+    wire [31 : 0] debug_3_data;
+    wire [31 : 0] debug_3_extra_data;
+    wire [31 : 0] debug_3_pc;
+    wire [31 : 0] debug_3_next_pc;
+    wire [31 : 0] debug_3_predict_result;
+    wire [6 : 0] debug_3_opcode;
+    wire [31 : 0] debug_3_rd;
+    wire debug_3_isReady;
+    wire debug_3_isBusy;
+    assign debug_3_opType = opType[3];
+    assign debug_3_data = data[3];
+    assign debug_3_extra_data = extra_data[3];
+    assign debug_3_pc = pc[3];
+    assign debug_3_next_pc = next_pc[3];
+    assign debug_3_predict_result = predict_result[3];
+    assign debug_3_opcode = opcode[3];
+    assign debug_3_rd = rd[3];
+    assign debug_3_isBusy = isBusy[3];
+    assign debug_3_isReady = isReady[3];
+
+    integer commit_num, file;
+    */
     // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -168,7 +247,10 @@ module RoB #(
             extra_wait <= 0;
             
             debug_en <= 0;
-            commit_num <= 1;
+            // commit_num <= 1;
+
+            isReady[NON_DEP] <= 0;
+            data[NON_DEP] <= 0;
 
             for (i = 0; i < RoB_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
@@ -256,9 +338,13 @@ module RoB #(
             end
 
             // monitor CDB, update data
-            if (CDB_update_en) begin
-                isReady[CDB_update_index] <= 1;
-                data[CDB_update_index] <= CDB_update_data;
+            if (CDB_RS_update_en) begin
+                isReady[CDB_RS_update_index] <= 1;
+                data[CDB_RS_update_index] <= CDB_RS_update_data;
+            end
+            if (CDB_LSB_update_en) begin
+                isReady[CDB_LSB_update_index] <= 1;
+                data[CDB_LSB_update_index] <= CDB_LSB_update_data;
             end
 
             // commit head entry
@@ -323,53 +409,24 @@ module RoB #(
                 // debug, print commit info
                 /*
                 commit_num <= commit_num + 1;
-                if (commit_num <= 2000) begin
+                if (commit_num <= 10000) begin
                     debug_en <= 1;
                     debug_commit_id <= commit_num;
                     file = $fopen("RoB_debug.txt", "a");
                     $fdisplay(file, "commit_id = [%d]: ", commit_num);
-                    // print the string of opcode
-                    case (debug_opcode)
-                        lui: $fdisplay(file, "lui");
-                        auipc: $fdisplay(file, "auipc");
-                        jal: $fdisplay(file, "jal");
-                        jalr: $fdisplay(file, "jalr");
-                        beq: $fdisplay(file, "beq");
-                        bne: $fdisplay(file, "bne");
-                        blt: $fdisplay(file, "blt");
-                        bge: $fdisplay(file, "bge");
-                        bltu: $fdisplay(file, "bltu");
-                        bgeu: $fdisplay(file, "bgeu");
-                        lb: $fdisplay(file, "lb");
-                        lh: $fdisplay(file, "lh");
-                        lw: $fdisplay(file, "lw");
-                        lbu: $fdisplay(file, "lbu");
-                        lhu: $fdisplay(file, "lhu");
-                        sb: $fdisplay(file, "sb");
-                        sh: $fdisplay(file, "sh");
-                        sw: $fdisplay(file, "sw");
-                        addi: $fdisplay(file, "addi");
-                        slti: $fdisplay(file, "slti");
-                        sltiu: $fdisplay(file, "sltiu");
-                        xori: $fdisplay(file, "xori");
-                        ori: $fdisplay(file, "ori");
-                        andi: $fdisplay(file, "andi");
-                        slli: $fdisplay(file, "slli");
-                        srli: $fdisplay(file, "srli");
-                        srai: $fdisplay(file, "srai");
-                        add: $fdisplay(file, "add");
-                        sub: $fdisplay(file, "sub");
-                        sll: $fdisplay(file, "sll");
-                        slt: $fdisplay(file, "slt");
-                        sltu: $fdisplay(file, "sltu");
-                        xorr: $fdisplay(file, "xorr");
-                        srl: $fdisplay(file, "srl");
-                        sra: $fdisplay(file, "sra");
-                        orr: $fdisplay(file, "orr");
-                        andr: $fdisplay(file, "andr");
-                        default: $fdisplay(file, "unknown");
-                    endcase
-                    $fdisplay(file, " opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = 0x%h, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d\n", debug_opType, debug_data, debug_extra_data, debug_pc, debug_next_pc, debug_predict_result, debug_opcode, debug_rd, debug_isReady, debug_isBusy);
+                    for (j = 0; j < RoB_SIZE; j = j + 1) 
+                    if (isBusy[j]) begin
+                        case (opcode[j])
+                            lui: $fdisplay(file, "lui"); auipc: $fdisplay(file, "auipc"); jal: $fdisplay(file, "jal"); jalr: $fdisplay(file, "jalr"); beq: $fdisplay(file, "beq"); bne: $fdisplay(file, "bne");
+                            blt: $fdisplay(file, "blt"); bge: $fdisplay(file, "bge"); bltu: $fdisplay(file, "bltu"); bgeu: $fdisplay(file, "bgeu"); lb: $fdisplay(file, "lb"); lh: $fdisplay(file, "lh");
+                            lw: $fdisplay(file, "lw"); lbu: $fdisplay(file, "lbu"); lhu: $fdisplay(file, "lhu"); sb: $fdisplay(file, "sb"); sh: $fdisplay(file, "sh"); sw: $fdisplay(file, "sw");
+                            addi: $fdisplay(file, "addi"); slti: $fdisplay(file, "slti"); sltiu: $fdisplay(file, "sltiu"); xori: $fdisplay(file, "xori"); ori: $fdisplay(file, "ori"); andi: $fdisplay(file, "andi");
+                            slli: $fdisplay(file, "slli"); srli: $fdisplay(file, "srli"); srai: $fdisplay(file, "srai"); add: $fdisplay(file, "add"); sub: $fdisplay(file, "sub"); sll: $fdisplay(file, "sll");
+                            slt: $fdisplay(file, "slt"); sltu: $fdisplay(file, "sltu"); xorr: $fdisplay(file, "xorr"); srl: $fdisplay(file, "srl"); sra: $fdisplay(file, "sra"); orr: $fdisplay(file, "orr");
+                            andr: $fdisplay(file, "andr"); default: $fdisplay(file, "unknown");
+                        endcase
+                        $fdisplay(file, "{%d} opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = 0x%h, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d", j, opType[j], data[j], extra_data[j], pc[j], next_pc[j], predict_result[j], opcode[j], rd[j], isReady[j], isBusy[j]);
+                    end
                     $fclose(file);
                 end
                 */

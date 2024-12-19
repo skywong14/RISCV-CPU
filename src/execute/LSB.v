@@ -66,15 +66,15 @@ module LSB #(
     input wire [31 : 0] new_entry_pc,
 
     // with CDB
-    input wire RoB_update_en,
-    input wire [RoB_WIDTH - 1 : 0] RoB_update_index,
-    input wire [31 : 0] RoB_update_data,
+    input wire CDB_RoB_update_en,
+    input wire [RoB_WIDTH - 1 : 0] CDB_RoB_update_index,
+    input wire [31 : 0] CDB_RoB_update_data,
     output reg RoB_write_en,
     output reg [RoB_WIDTH - 1 : 0] RoB_write_index,
     output reg [31 : 0] RoB_write_data,
 
     // with RoB
-    input wire [RoB_WIDTH - 1 : 0] RoB_headIndex, // the first entry waiting to commit, might be NON_DEP
+    input wire [RoB_WIDTH - 1 : 0] RoB_headIndex, // the first entry waiting to commit
     output reg [RoB_WIDTH : 0] lstCommittedWrite, // RoBIndex of the last committed write by LSB, might be NON_DEP
 
     // FLUSH signal from RoB
@@ -119,6 +119,8 @@ module LSB #(
     wire [1 : 0] debug_data_width;
     wire [31 : 0] debug_imm;
     wire debug_op_type;
+    wire debug_isBusy;
+    assign debug_isBusy = isBusy[head_ptr];
     assign debug_isReady = isReady[head_ptr];
     assign debug_Qj = Qj[head_ptr];
     assign debug_Qk = Qk[head_ptr];
@@ -177,16 +179,15 @@ module LSB #(
             end
         end
         else begin
-            debug_counter = debug_counter + 1;
             // get a new entry
             if (new_entry_en && !isFull) begin
                 isBusy[tail_ptr] <= 1;
                 tail_ptr <= (tail_ptr + 1) % LSB_SIZE;
                 // get values from dispatcher
-                Vj[tail_ptr] <= new_entry_Vj;
-                Vk[tail_ptr] <= new_entry_Vk;
-                Qj[tail_ptr] <= new_entry_Qj;
-                Qk[tail_ptr] <= new_entry_Qk;
+                Qj[tail_ptr] <= (new_entry_Qj != NON_DEP && CDB_RoB_update_en && new_entry_Qj == CDB_RoB_update_index) ? NON_DEP : new_entry_Qj;
+                Vj[tail_ptr] <= (new_entry_Qj != NON_DEP && CDB_RoB_update_en && new_entry_Qj == CDB_RoB_update_index) ? CDB_RoB_update_data : new_entry_Vj;
+                Qk[tail_ptr] <= (new_entry_Qk != NON_DEP && CDB_RoB_update_en && new_entry_Qk == CDB_RoB_update_index) ? NON_DEP : new_entry_Qk;
+                Vk[tail_ptr] <= (new_entry_Qk != NON_DEP && CDB_RoB_update_en && new_entry_Qk == CDB_RoB_update_index) ? CDB_RoB_update_data : new_entry_Vk;
                 imm[tail_ptr] <= new_entry_imm;
                 RoBEntry[tail_ptr] <= new_entry_RoBIndex;
                 case (new_entry_opcode)
@@ -230,6 +231,39 @@ module LSB #(
                 endcase
             end
 
+            // update Qj, Qk
+            if (CDB_RoB_update_en) begin
+                // monitor CDB, update Qj, Qk, Vj, Vk
+                for (i = 0; i < LSB_SIZE; i = i + 1) begin
+                    if (isBusy[i]) begin
+                        if (Qj[i] == CDB_RoB_update_index) begin
+                            Qj[i] <= NON_DEP;
+                            Vj[i] <= CDB_RoB_update_data;
+                        end
+                        if (Qk[i] == CDB_RoB_update_index) begin
+                            Qk[i] <= NON_DEP;
+                            Vk[i] <= CDB_RoB_update_data;
+                        end
+                    end
+                end
+            end
+            if (RoB_write_en) begin
+                for (i = 0; i < LSB_SIZE; i = i + 1) begin
+                    if (isBusy[i]) begin
+                        if (Qj[i] == RoB_write_index) begin
+                            Qj[i] <= NON_DEP;
+                            Vj[i] <= RoB_write_data;
+                        end
+                        if (Qk[i] == RoB_write_index) begin
+                            Qk[i] <= NON_DEP;
+                            Vk[i] <= RoB_write_data;
+                        end
+                    end
+                end
+            end
+
+
+
             if (state == NORMAL) begin
                 // reset RoB_write signal
                 RoB_write_en <= 0;
@@ -270,11 +304,10 @@ module LSB #(
                     end
                     else begin
                         // WRITE
-                        // maybe no need?
                         RoB_write_en <= 1;
-                        lstCommittedWrite <= RoBEntry[head_ptr];
+                        lstCommittedWrite <= RoBEntry[head_ptr];  // maybe no need?
                         RoB_write_index <= RoBEntry[head_ptr];
-                        RoB_write_data <= 0;
+                        RoB_write_data <= Vk[head_ptr]; // for debug, written data
                     end
                     isBusy[head_ptr] <= 0;
                     head_ptr <= (head_ptr + 1) % LSB_SIZE;

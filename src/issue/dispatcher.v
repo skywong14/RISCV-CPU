@@ -79,6 +79,10 @@ module Dispatcher #(
     output reg [31 : 0] RS_pc,
     input wire RS_isFull,
 
+    input wire RS_RoB_update_en,
+    input wire [RoB_WIDTH - 1 : 0] RS_RoB_update_index,
+    input wire [31 : 0] RS_RoB_update_data,
+
     // with LSB
     output reg LSB_newEntry_en,
     output reg [RoB_WIDTH - 1 : 0] LSB_RoBIndex,
@@ -91,6 +95,10 @@ module Dispatcher #(
     output reg [31 : 0] LSB_pc,
     input wire LSB_isFull,
 
+    input wire LSB_RoB_update_en,
+    input wire [RoB_WIDTH - 1 : 0] LSB_RoB_update_index,
+    input wire [31 : 0] LSB_RoB_update_data,
+
     // with RoB
     input wire RoB_isFull,
     input wire [RoB_WIDTH - 1 : 0] RoB_newEntryIndex,
@@ -102,9 +110,15 @@ module Dispatcher #(
     output reg [31 : 0] RoB_pc,
     output reg [31 : 0] RoB_next_pc, // branch jump destination
     output reg RoB_predict_result,
-
     output reg RoB_already_ready,
     output reg [31 : 0] RoB_ready_data,
+
+    output wire [RoB_WIDTH : 0] query_Qj_RoBEntry,
+    input wire query_Qj_RoBEntry_isReady,
+    input wire [31 : 0] query_Qj_RoBEntry_data,
+    output wire [RoB_WIDTH : 0] query_Qk_RoBEntry,
+    input wire query_Qk_RoBEntry_isReady,
+    input wire [31 : 0] query_Qk_RoBEntry_data,
 
     // with RF
     output wire [4 : 0] RF_rs1,
@@ -118,6 +132,8 @@ module Dispatcher #(
     output reg [RoB_WIDTH - 1 : 0] RF_newEntry_robIndex,
     output reg [4 : 0] RF_occupied_rd
 );
+    assign query_Qj_RoBEntry = RF_Qj;
+    assign query_Qk_RoBEntry = RF_Qk;
 
     assign RF_rs1 = (new_opcode == lui || new_opcode == auipc || new_opcode == jal) ? 0 : new_rs1;
     assign RF_rs2 = (new_opcode == lui || new_opcode == auipc || new_opcode == jal || new_opcode == jalr
@@ -212,9 +228,13 @@ module Dispatcher #(
                         RS_newEntry_en <= 1;
                         RS_robEntry <= RoB_newEntryIndex;
                         RS_opcode <= jalr;
-                        RS_Vj <= RF_Vj;
+                        RS_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        RS_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
                         RS_Vk <= 0;
-                        RS_Qj <= RF_Qj;
                         RS_Qk <= NON_DEP;
                         RS_imm <= new_imm;
                         RS_pc <= new_pc;
@@ -238,10 +258,20 @@ module Dispatcher #(
                         RS_newEntry_en <= 1;
                         RS_robEntry <= RoB_newEntryIndex;
                         RS_opcode <= new_opcode;
-                        RS_Vj <= RF_Vj;
-                        RS_Vk <= RF_Vk;
-                        RS_Qj <= RF_Qj;
-                        RS_Qk <= RF_Qk;
+                        RS_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        RS_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
+                        
+                        RS_Qk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (query_Qk_RoBEntry_isReady) ? NON_DEP : RF_Qk;
+                        RS_Vk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? RS_RoB_update_data :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? LSB_RoB_update_data :
+                            (query_Qk_RoBEntry_isReady) ? query_Qk_RoBEntry_data : RF_Vk;
+
                         RS_imm <= new_imm;
                         RS_pc <= new_pc;
 
@@ -264,10 +294,14 @@ module Dispatcher #(
                         LSB_newEntry_en <= 1;
                         LSB_RoBIndex <= RoB_newEntryIndex;
                         LSB_opcode <= new_opcode;
-                        LSB_Vj <= RF_Vj;
                         LSB_Vk <= 0;
-                        LSB_Qj <= RF_Qj;
                         LSB_Qk <= NON_DEP;
+                        LSB_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        LSB_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
                         LSB_imm <= new_imm;
                         LSB_pc <= new_pc;
 
@@ -290,10 +324,20 @@ module Dispatcher #(
                         LSB_newEntry_en <= 1;
                         LSB_RoBIndex <= RoB_newEntryIndex;
                         LSB_opcode <= new_opcode;
-                        LSB_Vj <= RF_Vj;
-                        LSB_Vk <= RF_Vk;
-                        LSB_Qj <= RF_Qj;
-                        LSB_Qk <= RF_Qk;
+
+                        LSB_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        LSB_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
+
+                        LSB_Qk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (query_Qk_RoBEntry_isReady) ? NON_DEP : RF_Qk;
+                        LSB_Vk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? RS_RoB_update_data :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? LSB_RoB_update_data :
+                            (query_Qk_RoBEntry_isReady) ? query_Qk_RoBEntry_data : RF_Vk;
                         LSB_imm <= new_imm;
                         LSB_pc <= new_pc;
 
@@ -316,9 +360,13 @@ module Dispatcher #(
                         RS_newEntry_en <= 1;
                         RS_robEntry <= RoB_newEntryIndex;
                         RS_opcode <= new_opcode;
-                        RS_Vj <= RF_Vj;
+                        RS_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        RS_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
                         RS_Vk <= 0;
-                        RS_Qj <= RF_Qj;
                         RS_Qk <= NON_DEP;
                         RS_imm <= new_imm;
                         RS_pc <= new_pc;
@@ -342,10 +390,19 @@ module Dispatcher #(
                         RS_newEntry_en <= 1;
                         RS_robEntry <= RoB_newEntryIndex;
                         RS_opcode <= new_opcode;
-                        RS_Vj <= RF_Vj;
-                        RS_Vk <= RF_Vk;
-                        RS_Qj <= RF_Qj;
-                        RS_Qk <= RF_Qk;
+                        RS_Qj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? NON_DEP :
+                            (query_Qj_RoBEntry_isReady) ? NON_DEP : RF_Qj;
+                        RS_Vj <= (RF_Qj != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qj) ? RS_RoB_update_data :
+                            (RF_Qj != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qj) ? LSB_RoB_update_data :
+                            (query_Qj_RoBEntry_isReady) ? query_Qj_RoBEntry_data : RF_Vj;
+                        
+                        RS_Qk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? NON_DEP :
+                            (query_Qk_RoBEntry_isReady) ? NON_DEP : RF_Qk;
+                        RS_Vk <= (RF_Qk != NON_DEP && RS_RoB_update_en && RS_RoB_update_index == RF_Qk) ? RS_RoB_update_data :
+                            (RF_Qk != NON_DEP && LSB_RoB_update_en && LSB_RoB_update_index == RF_Qk) ? LSB_RoB_update_data :
+                            (query_Qk_RoBEntry_isReady) ? query_Qk_RoBEntry_data : RF_Vk;
                         RS_imm <= 0;
                         RS_pc <= new_pc;
 

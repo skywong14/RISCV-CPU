@@ -19,13 +19,20 @@ module CDB #(
     input wire [31 : 0] RS_update_data,
 
     // output
-    output wire RoBEntry_update_en,
-    output wire [RoB_WIDTH - 1 : 0] RoBEntry_update_index,
-    output wire [31 : 0] RoBEntry_update_data
+    output wire RoBEntry_RS_update_en,
+    output wire [RoB_WIDTH - 1 : 0] RoBEntry_RS_update_index,
+    output wire [31 : 0] RoBEntry_RS_update_data,
+
+    output wire RoBEntry_LSB_update_en,
+    output wire [RoB_WIDTH - 1 : 0] RoBEntry_LSB_update_index,
+    output wire [31 : 0] RoBEntry_LSB_update_data
 );
 
-    assign RoBEntry_update_en = LSB_update_en || RS_update_en;
-    assign RoBEntry_update_index = RS_update_en ? RS_update_index : LSB_update_index;
-    assign RoBEntry_update_data = RS_update_en ? RS_update_data : LSB_update_data;
-    assign conflict_signal = LSB_update_en && RS_update_en; // it goes wrong if conflict, for debug  
+    assign RoBEntry_RS_update_en = RS_update_en;
+    assign RoBEntry_RS_update_index = RS_update_index;
+    assign RoBEntry_RS_update_data = RS_update_data;
+
+    assign RoBEntry_LSB_update_en = LSB_update_en;
+    assign RoBEntry_LSB_update_index = LSB_update_index;
+    assign RoBEntry_LSB_update_data = LSB_update_data;
 endmodule

@@ -6,9 +6,9 @@
 
 
 module Reservation_Station #(
-    parameter RS_WIDTH = 2,
+    parameter RS_WIDTH = 4,
     parameter RS_SIZE = 1 << RS_WIDTH,
-    parameter RoB_WIDTH = 3,
+    parameter RoB_WIDTH = 4,
     parameter RoB_SIZE = 1 << RoB_WIDTH,
 
 
@@ -64,9 +64,9 @@ module Reservation_Station #(
     input wire CDB_update_en,
     input wire [RoB_WIDTH - 1 : 0] CDB_update_index,
     input wire [31 : 0] CDB_update_data,
-    output reg RS_update_en,
-    output reg [RoB_WIDTH - 1 : 0] RS_update_index,
-    output reg [31 : 0] RS_update_data,
+    output reg RoB_update_en,
+    output reg [RoB_WIDTH - 1 : 0] RoB_update_index,
+    output reg [31 : 0] RoB_update_data,
 
     // flush signal
     input wire flush_signal,
@@ -91,17 +91,20 @@ module Reservation_Station #(
     wire [RS_WIDTH : 0] busy_pos;
     wire [RS_WIDTH : 0] ready_pos;
     
-    assign idle_pos = (!isBusy[0]) ? 0 : (!isBusy[1]) ? 1 : (!isBusy[2]) ? 2 : (!isBusy[3]) ? 3 : 4;
-    assign busy_pos = (isBusy[0]) ? 0 : (isBusy[1]) ? 1 : (isBusy[2]) ? 2 : (isBusy[3]) ? 3 : 4;
-    assign ready_pos = (isReady[0]) ? 0 : (isReady[1]) ? 1 : (isReady[2]) ? 2 : (isReady[3]) ? 3 : 4;
-    /*
     assign idle_pos = (!isBusy[0]) ? 0 : (!isBusy[1]) ? 1 : (!isBusy[2]) ? 2 : (!isBusy[3]) ? 3 : (!isBusy[4]) ? 4 : 
-            (!isBusy[5]) ? 5 : (!isBusy[6]) ? 6 : (!isBusy[7]) ? 7 : 8;
+            (!isBusy[5]) ? 5 : (!isBusy[6]) ? 6 : (!isBusy[7]) ? 7 : 
+            (!isBusy[8]) ? 8 : (!isBusy[9]) ? 9 : (!isBusy[10]) ? 10 : (!isBusy[11]) ? 11 : (!isBusy[12]) ? 12 : 
+            (!isBusy[13]) ? 13 : (!isBusy[14]) ? 14 : (!isBusy[15]) ? 15 : 16;
     assign busy_pos = (isBusy[0]) ? 0 : (isBusy[1]) ? 1 : (isBusy[2]) ? 2 : (isBusy[3]) ? 3 : (isBusy[4]) ? 4 :
-            (isBusy[5]) ? 5 : (isBusy[6]) ? 6 : (isBusy[7]) ? 7 : 8;        
+            (isBusy[5]) ? 5 : (isBusy[6]) ? 6 : (isBusy[7]) ? 7 : 
+            (isBusy[8]) ? 8 : (isBusy[9]) ? 9 : (isBusy[10]) ? 10 : (isBusy[11]) ? 11 : (isBusy[12]) ? 12 :
+            (isBusy[13]) ? 13 : (isBusy[14]) ? 14 : (isBusy[15]) ? 15 : 16;     
     assign ready_pos = (isReady[0]) ? 0 : (isReady[1]) ? 1 : (isReady[2]) ? 2 : (isReady[3]) ? 3 : (isReady[4]) ? 4 :
-            (isReady[5]) ? 5 : (isReady[6]) ? 6 : (isReady[7]) ? 7 : 8;        
-    */
+            (isReady[5]) ? 5 : (isReady[6]) ? 6 : (isReady[7]) ? 7 :
+            (isReady[8]) ? 8 : (isReady[9]) ? 9 : (isReady[10]) ? 10 : (isReady[11]) ? 11 : (isReady[12]) ? 12 :
+            (isReady[13]) ? 13 : (isReady[14]) ? 14 : (isReady[15]) ? 15 : 16;    
+
+    
     assign isFull = (idle_pos == (1 << RS_WIDTH));
     assign isEmpty = (busy_pos == (1 << RS_WIDTH));
 
@@ -118,7 +121,7 @@ module Reservation_Station #(
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
-            RS_update_en <= 0;
+            RoB_update_en <= 0;
             for (i = 0; i < RS_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
                 opcode[i] <= 0;
@@ -135,7 +138,7 @@ module Reservation_Station #(
             // pause
         end if (flush_signal) begin
             // flush
-            RS_update_en <= 0;
+            RoB_update_en <= 0;
             for (i = 0; i < RS_SIZE; i = i + 1) begin
                 isBusy[i] <= 0;
                 opcode[i] <= 0;
@@ -150,21 +153,37 @@ module Reservation_Station #(
         end
         else begin
             // run
-            RS_update_en <= 0;
+            RoB_update_en <= 0;
             if (!isFull && new_entry_en) begin
                 // get new entry
                 opcode[idle_pos] <= new_entry_opcode;
-                Vj[idle_pos] <= new_entry_Vj;
-                Vk[idle_pos] <= new_entry_Vk;
-                Qj[idle_pos] <= new_entry_Qj;
-                Qk[idle_pos] <= new_entry_Qk;
+                Qj[idle_pos] <= (new_entry_Qj != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qj) ? NON_DEP : new_entry_Qj;
+                Vj[idle_pos] <= (new_entry_Qj != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qj) ? RoB_update_data : new_entry_Vj;
+                Qk[idle_pos] <= (new_entry_Qk != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qk) ? NON_DEP : new_entry_Qk;
+                Vk[idle_pos] <= (new_entry_Qk != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qk) ? RoB_update_data : new_entry_Vk;
+
                 imm[idle_pos] <= new_entry_imm;
                 robEntry[idle_pos] <= new_entry_robEntry;
                 pc[idle_pos] <= new_entry_pc;
                 isBusy[idle_pos] <= 1;
                 // idle_pos will be updated automatically
             end
-            
+
+            // update self state from self commit
+            if (RoB_update_en) begin
+                for (i = 0; i < RS_SIZE; i = i + 1) begin
+                    if (isBusy[i]) begin
+                        if (Qj[i] == RoB_update_index) begin
+                            Qj[i] <= NON_DEP;
+                            Vj[i] <= RoB_update_data;
+                        end
+                        if (Qk[i] == RoB_update_index) begin
+                            Qk[i] <= NON_DEP;
+                            Vk[i] <= RoB_update_data;
+                        end
+                    end
+                end
+            end
             if (CDB_update_en) begin
                 // monitor CDB, update Qj, Qk, Vj, Vk
                 for (i = 0; i < RS_SIZE; i = i + 1) begin
@@ -183,38 +202,38 @@ module Reservation_Station #(
 
             // calc a ready entry, commit, clear
             if (ready_pos != (1 << RS_WIDTH)) begin
-                RS_update_en <= 1;
-                RS_update_index <= robEntry[ready_pos];
+                RoB_update_en <= 1;
+                RoB_update_index <= robEntry[ready_pos];
                 case (opcode[ready_pos])
-                    jalr: RS_update_data <= (Vj[ready_pos] + imm[ready_pos]) & ~1;
+                    jalr: RoB_update_data <= (Vj[ready_pos] + imm[ready_pos]) & ~1;
 
-                    beq: RS_update_data <= (Vj[ready_pos] == Vk[ready_pos]) ? 1 : 0;
-                    bne: RS_update_data <= (Vj[ready_pos] != Vk[ready_pos]) ? 1 : 0;
-                    blt: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
-                    bge: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? 1 : 0;
-                    bltu: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
-                    bgeu: RS_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? 1 : 0;
+                    beq: RoB_update_data <= (Vj[ready_pos] == Vk[ready_pos]) ? 1 : 0;
+                    bne: RoB_update_data <= (Vj[ready_pos] != Vk[ready_pos]) ? 1 : 0;
+                    blt: RoB_update_data <= ($signed(Vj[ready_pos]) < $signed(Vk[ready_pos])) ? 1 : 0;
+                    bge: RoB_update_data <= ($signed(Vj[ready_pos]) >= $signed(Vk[ready_pos])) ? 1 : 0;
+                    bltu: RoB_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
+                    bgeu: RoB_update_data <= (Vj[ready_pos] >= Vk[ready_pos]) ? 1 : 0;
 
-                    addi: RS_update_data <= Vj[ready_pos] + imm[ready_pos];
-                    slti: RS_update_data <= (Vj[ready_pos] < imm[ready_pos]) ? 1 : 0;
-                    sltiu: RS_update_data <= (Vj[ready_pos] < imm[ready_pos]) ? 1 : 0;
-                    xori: RS_update_data <= Vj[ready_pos] ^ imm[ready_pos];
-                    ori: RS_update_data <= Vj[ready_pos] | imm[ready_pos];
-                    andi: RS_update_data <= Vj[ready_pos] & imm[ready_pos];
-                    slli: RS_update_data <= Vj[ready_pos] << imm[ready_pos];
-                    srli: RS_update_data <= Vj[ready_pos] >> imm[ready_pos];
-                    srai: RS_update_data <= Vj[ready_pos] >>> imm[ready_pos];
+                    addi: RoB_update_data <= Vj[ready_pos] + imm[ready_pos];
+                    slti: RoB_update_data <= (Vj[ready_pos] < imm[ready_pos]) ? 1 : 0;
+                    sltiu: RoB_update_data <= (Vj[ready_pos] < imm[ready_pos]) ? 1 : 0;
+                    xori: RoB_update_data <= Vj[ready_pos] ^ imm[ready_pos];
+                    ori: RoB_update_data <= Vj[ready_pos] | imm[ready_pos];
+                    andi: RoB_update_data <= Vj[ready_pos] & imm[ready_pos];
+                    slli: RoB_update_data <= Vj[ready_pos] << imm[ready_pos];
+                    srli: RoB_update_data <= Vj[ready_pos] >> imm[ready_pos];
+                    srai: RoB_update_data <= Vj[ready_pos] >>> imm[ready_pos];
 
-                    add: RS_update_data <= Vj[ready_pos] + Vk[ready_pos];
-                    sub: RS_update_data <= Vj[ready_pos] - Vk[ready_pos];
-                    sll: RS_update_data <= Vj[ready_pos] << Vk[ready_pos];
-                    slt: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
-                    sltu: RS_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
-                    xorr: RS_update_data <= Vj[ready_pos] ^ Vk[ready_pos];
-                    srl: RS_update_data <= Vj[ready_pos] >> Vk[ready_pos];
-                    sra: RS_update_data <= Vj[ready_pos] >>> Vk[ready_pos];
-                    orr: RS_update_data <= Vj[ready_pos] | Vk[ready_pos];
-                    andr: RS_update_data <= Vj[ready_pos] & Vk[ready_pos];
+                    add: RoB_update_data <= Vj[ready_pos] + Vk[ready_pos];
+                    sub: RoB_update_data <= Vj[ready_pos] - Vk[ready_pos];
+                    sll: RoB_update_data <= Vj[ready_pos] << Vk[ready_pos];
+                    slt: RoB_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
+                    sltu: RoB_update_data <= (Vj[ready_pos] < Vk[ready_pos]) ? 1 : 0;
+                    xorr: RoB_update_data <= Vj[ready_pos] ^ Vk[ready_pos];
+                    srl: RoB_update_data <= Vj[ready_pos] >> Vk[ready_pos];
+                    sra: RoB_update_data <= Vj[ready_pos] >>> Vk[ready_pos];
+                    orr: RoB_update_data <= Vj[ready_pos] | Vk[ready_pos];
+                    andr: RoB_update_data <= Vj[ready_pos] & Vk[ready_pos];
                 endcase
                 // clear ready entry
                 isBusy[ready_pos] <= 0;

@@ -2,10 +2,10 @@
 // port modification allowed for debugging purposes
 
 module cpu #(
-  parameter RoB_WIDTH = 0,
-  parameter LSB_WIDTH = 3,
-  parameter RS_WIDTH = 2,
-  parameter BP_WIDTH = 2
+  parameter RoB_WIDTH = 4,
+  parameter LSB_WIDTH = 4,
+  parameter RS_WIDTH = 4,
+  parameter BP_WIDTH = 4
 ) (
   input  wire                 clk_in,			// system clock signal
   input  wire                 rst_in,			// reset signal
@@ -57,17 +57,23 @@ wire RoB_bp_update_en;
 wire [31 : 0] RoB_bp_update_pc;
 wire RoB_bp_update_result;
 wire RoB_isFull;
-wire [RoB_WIDTH - 1 : 0] RoB_newEntry_index;
+wire [RoB_WIDTH - 1 : 0] RoB_RoB_tailIndex;
 wire RoB_flush_signal;
+wire [RoB_WIDTH - 1 : 0] RoB_RoB_headIndex;
+
+wire RoB_query_Qj_isReady;
+wire [31 : 0] RoB_query_Qj_data;
+wire RoB_query_Qk_isReady;
+wire [31 : 0] RoB_query_Qk_data;
 
 // debug info output by RoB
 wire RoB_debug_en;
 wire [31 : 0] RoB_debug_commit_id;
 
 // output by RS
-wire RS_RS_update_en;
-wire [RoB_WIDTH - 1 : 0] RS_RS_update_index;
-wire [31 : 0] RS_RS_update_data;
+wire RS_RoB_update_en;
+wire [RoB_WIDTH - 1 : 0] RS_RoB_update_index;
+wire [31 : 0] RS_RoB_update_data;
 wire RS_isEmpty;
 wire RS_isFull;
 
@@ -112,6 +118,9 @@ wire Dispatcher_RF_newEntry_en;
 wire [RoB_WIDTH - 1 : 0] Dispatcher_RF_newEntry_robIndex;
 wire [4 : 0] Dispatcher_RF_occupied_rd;
 
+wire [RoB_WIDTH : 0] Dispatcher_query_Qj_RoBEntry;
+wire [RoB_WIDTH : 0] Dispatcher_query_Qk_RoBEntry;
+
 // output by Instruction_Fetcher
 wire IF_icache_query_en;
 wire [31 : 0] IF_icache_query_pc;
@@ -148,9 +157,12 @@ wire [31 : 0] RF_Vj;
 wire [31 : 0] RF_Vk;
 
 // output by CDB
-wire CDB_RoBEntry_update_en;
-wire [RoB_WIDTH - 1 : 0] CDB_RoBEntry_update_index;
-wire [31 : 0] CDB_RoBEntry_update_data;
+wire CDB_RS_RoBEntry_update_en;
+wire CDB_LSB_RoBEntry_update_en;
+wire [RoB_WIDTH - 1 : 0] CDB_RS_RoBEntry_update_index;
+wire [RoB_WIDTH - 1 : 0] CDB_LSB_RoBEntry_update_index;
+wire [31 : 0] CDB_RS_RoBEntry_update_data;
+wire [31 : 0] CDB_LSB_RoBEntry_update_data;
 
 assign mem_a = MC_ram_addr_in;
 assign mem_dout = MC_ram_dout;
@@ -172,12 +184,22 @@ RoB #(
   .already_ready(Dispatcher_RoB_already_ready),
   .ready_data(Dispatcher_RoB_ready_data),
 
+  .query_Qj_index(Dispatcher_query_Qj_RoBEntry),
+  .query_Qj_isReady(RoB_query_Qj_isReady),
+  .query_Qj_data(RoB_query_Qj_data),
+  .query_Qk_index(Dispatcher_query_Qk_RoBEntry),
+  .query_Qk_isReady(RoB_query_Qk_isReady),
+  .query_Qk_data(RoB_query_Qk_data),
+
   .debug_en(RoB_debug_en),
   .debug_commit_id(RoB_debug_commit_id),
 
-  .CDB_update_en(CDB_RoBEntry_update_en),
-  .CDB_update_index(CDB_RoBEntry_update_index),
-  .CDB_update_data(CDB_RoBEntry_update_data),
+  .CDB_RS_update_en(CDB_RS_RoBEntry_update_en),
+  .CDB_RS_update_index(CDB_RS_RoBEntry_update_index),
+  .CDB_RS_update_data(CDB_RS_RoBEntry_update_data),
+  .CDB_LSB_update_en(CDB_LSB_RoBEntry_update_en),
+  .CDB_LSB_update_index(CDB_LSB_RoBEntry_update_index),
+  .CDB_LSB_update_data(CDB_LSB_RoBEntry_update_data),
 
   .RF_update_en(RoB_RF_update_en),
   .RF_update_reg(RoB_RF_update_reg),
@@ -190,7 +212,8 @@ RoB #(
   .bp_update_pc(RoB_bp_update_pc),
   .bp_update_result(RoB_bp_update_result),
   .isFull(RoB_isFull),
-  .new_entry_index(RoB_newEntry_index),
+  .RoB_headIndex(RoB_RoB_headIndex),
+  .RoB_tailIndex(RoB_RoB_tailIndex),
   .flush_signal(RoB_flush_signal)
 );
 
@@ -237,6 +260,9 @@ Dispatcher #(
   .RS_imm(Dispatcher_RS_imm),
   .RS_pc(Dispatcher_RS_pc),
   .RS_isFull(RS_isFull),
+  .RS_RoB_update_en(CDB_LSB_RoBEntry_update_en),
+  .RS_RoB_update_index(CDB_LSB_RoBEntry_update_index),
+  .RS_RoB_update_data(CDB_LSB_RoBEntry_update_data),
   
   .LSB_newEntry_en(Dispatcher_LSB_newEntry_en),
   .LSB_RoBIndex(Dispatcher_LSB_RoBIndex),
@@ -248,9 +274,12 @@ Dispatcher #(
   .LSB_imm(Dispatcher_LSB_imm),
   .LSB_pc(Dispatcher_LSB_pc),
   .LSB_isFull(LSB_isFull),
+  .LSB_RoB_update_en(CDB_LSB_RoBEntry_update_en),
+  .LSB_RoB_update_index(CDB_LSB_RoBEntry_update_index),
+  .LSB_RoB_update_data(CDB_LSB_RoBEntry_update_data),
 
   .RoB_isFull(RoB_isFull),
-  .RoB_newEntryIndex(RoB_newEntry_index),
+  .RoB_newEntryIndex(RoB_RoB_tailIndex),
   .RoB_flush_signal(RoB_flush_signal),
   .RoB_newEntry_en(Dispatcher_RoB_newEntry_en),
   .RoB_opcode(Dispatcher_RoB_opcode),
@@ -260,6 +289,12 @@ Dispatcher #(
   .RoB_predict_result(Dispatcher_RoB_predict_result),
   .RoB_already_ready(Dispatcher_RoB_already_ready),
   .RoB_ready_data(Dispatcher_RoB_ready_data),
+  .query_Qj_RoBEntry(Dispatcher_query_Qj_RoBEntry),
+  .query_Qj_RoBEntry_isReady(RoB_query_Qj_isReady),
+  .query_Qj_RoBEntry_data(RoB_query_Qj_data),
+  .query_Qk_RoBEntry(Dispatcher_query_Qk_RoBEntry),
+  .query_Qk_RoBEntry_isReady(RoB_query_Qk_isReady),
+  .query_Qk_RoBEntry_data(RoB_query_Qk_data),
 
   .RF_rs1(Dispatcher_RF_rs1),
   .RF_rs2(Dispatcher_RF_rs2),
@@ -283,7 +318,7 @@ Instruction_Fetcher #(
   .icache_data_en(icache_IF_dout_en),
   .icache_data(icache_IF_dout),
   .rob_isFull(RoB_isFull),
-  .new_entry_index(RoB_newEntry_index),
+  .new_entry_index(RoB_RoB_tailIndex),
   .jalr_result_en(RoB_jalr_feedback_en),
   .jalr_result(RoB_jalr_feedback_data),
   .flush_signal(RoB_flush_signal),
@@ -369,15 +404,18 @@ RF #(
 CDB #(
   .RoB_WIDTH(RoB_WIDTH)
 ) CDB_module (
-  .LSB_update_en(MC_LSB_result_en),
+  .LSB_update_en(LSB_RoB_write_en),
   .LSB_update_index(LSB_RoB_write_index),
-  .LSB_update_data(MC_LSB_result_data),
-  .RS_update_en(RS_RS_update_en),
-  .RS_update_index(RS_RS_update_index),
-  .RS_update_data(RS_RS_update_data),
-  .RoBEntry_update_en(CDB_RoBEntry_update_en),
-  .RoBEntry_update_index(CDB_RoBEntry_update_index),
-  .RoBEntry_update_data(CDB_RoBEntry_update_data)
+  .LSB_update_data(LSB_RoB_write_data),
+  .RS_update_en(RS_RoB_update_en),
+  .RS_update_index(RS_RoB_update_index),
+  .RS_update_data(RS_RoB_update_data),
+  .RoBEntry_RS_update_en(CDB_RS_RoBEntry_update_en),
+  .RoBEntry_RS_update_index(CDB_RS_RoBEntry_update_index),
+  .RoBEntry_RS_update_data(CDB_RS_RoBEntry_update_data),
+  .RoBEntry_LSB_update_en(CDB_LSB_RoBEntry_update_en),
+  .RoBEntry_LSB_update_index(CDB_LSB_RoBEntry_update_index),
+  .RoBEntry_LSB_update_data(CDB_LSB_RoBEntry_update_data)
 );
 
 LSB #(
@@ -405,15 +443,15 @@ LSB #(
   .new_entry_imm(Dispatcher_LSB_imm),
   .new_entry_pc(Dispatcher_LSB_pc),
 
-  .RoB_update_en(CDB_RoBEntry_update_en),
-  .RoB_update_index(CDB_RoBEntry_update_index),
-  .RoB_update_data(CDB_RoBEntry_update_data),
+  .CDB_RoB_update_en(CDB_RS_RoBEntry_update_en),
+  .CDB_RoB_update_index(CDB_RS_RoBEntry_update_index),
+  .CDB_RoB_update_data(CDB_RS_RoBEntry_update_data),
   .RoB_write_en(LSB_RoB_write_en),
   .RoB_write_index(LSB_RoB_write_index),
   .RoB_write_data(LSB_RoB_write_data),
 
-  .RoB_headIndex(RoB_newEntry_index),
-  .lstCommittedWrite(LSB_lstCommittedWrite),
+  .RoB_headIndex(RoB_RoB_headIndex),
+  .lstCommittedWrite(LSB_lstCommittedWrite), // not used
   .flush_signal(RoB_flush_signal),
   .isFull(LSB_isFull)
 );
@@ -436,12 +474,12 @@ Reservation_Station #(
   .new_entry_imm(Dispatcher_RS_imm),
   .new_entry_pc(Dispatcher_RS_pc),
 
-  .CDB_update_en(CDB_RoBEntry_update_en),
-  .CDB_update_index(CDB_RoBEntry_update_index),
-  .CDB_update_data(CDB_RoBEntry_update_data),
-  .RS_update_en(RS_RS_update_en),
-  .RS_update_index(RS_RS_update_index),
-  .RS_update_data(RS_RS_update_data),
+  .CDB_update_en(CDB_LSB_RoBEntry_update_en),
+  .CDB_update_index(CDB_LSB_RoBEntry_update_index),
+  .CDB_update_data(CDB_LSB_RoBEntry_update_data),
+  .RoB_update_en(RS_RoB_update_en),
+  .RoB_update_index(RS_RoB_update_index),
+  .RoB_update_data(RS_RoB_update_data),
 
   .flush_signal(RoB_flush_signal),
   .isEmpty(RS_isEmpty),

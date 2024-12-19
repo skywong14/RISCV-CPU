@@ -57,13 +57,8 @@ module RF #(
 
     integer i;
 
-    integer file;
-
     // debug
-    wire [RoB_WIDTH : 0] debug_sp_dep;
-    wire [31 : 0] debug_sp_data;
-    assign debug_sp_dep = dependency[2];
-    assign debug_sp_data = registers[2];
+    integer file;
 
     always @(posedge clk_in) begin
         if (rst_in) begin
