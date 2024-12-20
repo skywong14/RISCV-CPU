@@ -332,6 +332,7 @@ Instruction_Fetcher #(
   .new_instruction_en(IF_new_instruction_en),
   .new_pc(IF_new_pc),
   .new_opcode(IF_new_opcode),
+  
   .new_rs1(IF_new_rs1),
   .new_rs2(IF_new_rs2),
   .new_rd(IF_new_rd),

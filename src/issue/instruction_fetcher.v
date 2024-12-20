@@ -93,7 +93,7 @@ module Instruction_Fetcher #(
     output reg icache_query_en,
     output reg [31 : 0] icache_query_pc,
     input wire icache_data_en,
-    input wire [31 : 0] icache_addr_comfirm,
+    // input wire [31 : 0] icache_addr_comfirm,
     input wire [31 : 0] icache_data,
 
     // with RoB
