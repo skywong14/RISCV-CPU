@@ -1,0 +1,27 @@
+#### 需要实现的边长指令
+
+- c.addi      000 | imm[5]  | rs1/rd != 0   | imm[4:0]      | 01
+- c.jal       001 | imm[11|4|9:8|10|6|7|3:1|5]              | 01
+- c.li        010 | imm[5]  | rd!=0         | imm[4:0]      | 01
+- c.addi16sp  011 | imm[9]  | 2             | imm[4|6|8:7|5]| 01
+- c.lui       011 | imm[17] | rd!={0,2}     | imm[16:12]    | 01
+- c.srli      100 | uimm[5] | 00 | rs1'/rd' | uimm[4:0]     | 01
+- c.srai      100 | uimm[5] | 01 | rs1'/rd' | uimm[4:0]     | 01
+- c.andi      100 | imm[5]  | 11 | rs1'/rd' | imm[4:0]      | 01
+- c.sub       100 | 0       | 11 | rs1'/rd' | 00 | rs2'     | 01
+- c.xor       100 | 0       | 11 | rs1'/rd' | 01 | rs2'     | 01
+- c.or        100 | 0       | 11 | rs1'/rd' | 10 | rs2'     | 01
+- c.and       100 | 1       | 11 | rs1'/rd' | 11 | rs2'     | 01
+- c.j         101 | imm[11|4|9:8|10|6|7|3:1|5]              | 01
+- c.beqz      110 | imm[8|4:3]   | rs1'     | imm[7:6|2:1|5]| 01
+- c.bnez      111 | imm[8|4:3]   | rs1'     | imm[7:6|2:1|5]| 01
+- c.addi4spn  000 | uimm[5:4|9:6|2|3]                  |rd' | 00
+- c.lw        010 | uimm[5:3]    | rs1'     | uimm[2|6]|rd' | 00  
+- c.sw        110 | uimm[5:3]    | rs1'     | uimm[7:6]|rs2'| 00
+- c.slli      000 | uimm[5] | rs1/rd != 0   | uimm[4:0]     | 10
+- c.jr        100 | 0       | rs1 != 0      | 0             | 10
+- c.mv        100 | 0       | rd != 0       | rs2 != 0      | 10
+- c.jalr      100 | 1       | rs1 != 0      | 0             | 10
+- c.add       100 | 1       | rs1/rd != 0   | rs2 != 0      | 10
+- c.lwsp      010 | uimm[5] | rd != 0       | uimm[4:2|7:6] | 10
+- c.swsp      110 | uimm[5:2|7:6]           | rs2           | 10
