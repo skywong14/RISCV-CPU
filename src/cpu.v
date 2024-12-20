@@ -5,7 +5,7 @@ module cpu #(
   parameter RoB_WIDTH = 4,
   parameter LSB_WIDTH = 4,
   parameter RS_WIDTH = 4,
-  parameter BP_WIDTH = 4
+  parameter BP_WIDTH = 5
 ) (
   input  wire                 clk_in,			// system clock signal
   input  wire                 rst_in,			// reset signal
@@ -332,7 +332,7 @@ Instruction_Fetcher #(
   .new_instruction_en(IF_new_instruction_en),
   .new_pc(IF_new_pc),
   .new_opcode(IF_new_opcode),
-  
+
   .new_rs1(IF_new_rs1),
   .new_rs2(IF_new_rs2),
   .new_rd(IF_new_rd),

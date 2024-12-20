@@ -22,24 +22,16 @@ module Branch_Predictor #(
     // with IF
     input wire query_en,
     input wire [31 : 0] query_PC,
-    output wire result_out // 0: not jump, 1: jump
+    output reg result_out // 0: not jump, 1: jump
 );
     reg [1 : 0] regList[SIZE - 1 : 0];
-    reg [1 : 0] single; // debug
 
     wire [BP_WIDTH - 1 : 0] valid_part;
     assign valid_part = query_PC[BP_WIDTH : 1];
 
-    assign result_out = single[1];
-
-    // always@(*) begin
-            // result_out = regList[valid_part][1];
-        // if (query_en) begin 
-            // result_out = regList[valid_part][1];
-        // end else begin
-            // result_out = 1'b0;
-        // end
-    // end
+    always@(*) begin
+        result_out = regList[valid_part][1];
+    end
 
     integer i;
 
@@ -49,7 +41,6 @@ module Branch_Predictor #(
             for (i = 0; i < SIZE; i = i + 1) begin
                 regList[i] <= 2'b10;
             end
-            single <= 2'b10;
         end
         else if (!rdy_in) begin
             // pause
@@ -59,26 +50,16 @@ module Branch_Predictor #(
             if (update_en) begin
                 if (update_result) begin
                     // jump, add
-                    if (single < 3)
-                        single <= single + 1;
+                    if (regList[update_PC[BP_WIDTH : 1]] < 3) begin
+                        regList[update_PC[BP_WIDTH : 1]] <= regList[update_PC[BP_WIDTH : 1]] + 1;
+                    end
                 end
                 else begin
                     // not jump, dec
-                    if (single > 0)
-                        single <= single - 1;
+                    if (regList[update_PC[BP_WIDTH : 1]] > 0) begin
+                        regList[update_PC[BP_WIDTH : 1]] <= regList[update_PC[BP_WIDTH : 1]] - 1;
+                    end
                 end
-            //     if (update_result) begin
-            //         // jump, add
-            //         if (regList[update_PC[BP_WIDTH + 1 : 2]] < 3) begin
-            //             regList[update_PC[BP_WIDTH + 1 : 2]] <= regList[update_PC[BP_WIDTH + 1 : 2]] + 1;
-            //         end
-            //     end
-            //     else begin
-            //         // not jump, dec
-            //         if (regList[update_PC[BP_WIDTH + 1 : 2]] > 0) begin
-            //             regList[update_PC[BP_WIDTH + 1 : 2]] <= regList[update_PC[BP_WIDTH + 1 : 2]] - 1;
-            //         end
-            //     end
             end
         end
     end
