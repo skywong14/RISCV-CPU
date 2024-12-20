@@ -27,7 +27,6 @@
 - c.add       100 | 1       | rs1/rd != 0   | rs2 != 0      | 10
 - c.lwsp      010 | uimm[5] | rd != 0       | uimm[4:2|7:6] | 10
 - c.swsp      110 | uimm[5:2|7:6]           | rs2           | 10
-100 01111100010 01
 */
 
 module CType_Decoder #(
@@ -110,7 +109,7 @@ assign imm = (opcode_ctype == c_addi || opcode_ctype == c_li || opcode_ctype == 
                 (opcode_ctype == c_jal || opcode_ctype == c_j) ? {{21{instruction[12]}}, instruction[8], instruction[10:9], instruction[6], instruction[7], instruction[2], instruction[11], instruction[5 : 3], 1'b0} :
                 (opcode_ctype == c_addi16sp) ? {{23{instruction[12]}}, instruction[4:3], instruction[5], instruction[2], instruction[6], 4'b0} :
                 (opcode_ctype == c_lui) ? {{15{instruction[12]}}, instruction[6 : 2], 12'b0} :
-                (opcode_ctype == c_beqz || opcode_ctype == c_bnez) ? {{21{instruction[12]}}, instruction[6 : 5], instruction[2], instruction[11 : 10], instruction[4 : 3], 1'b0} : 0;
+                (opcode_ctype == c_beqz || opcode_ctype == c_bnez) ? {{24{instruction[12]}}, instruction[6 : 5], instruction[2], instruction[11 : 10], instruction[4 : 3], 1'b0} : 0;
 
 assign rs1 = (opcode_ctype == c_addi || opcode_ctype == c_slli || opcode_ctype == c_jr || opcode_ctype == c_jalr || opcode_ctype == c_add) ? instruction[11 : 7] :
                 (opcode_ctype == c_srli || opcode_ctype == c_srai || opcode_ctype == c_andi || opcode_ctype == c_sub 

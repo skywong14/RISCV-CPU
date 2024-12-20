@@ -327,9 +327,9 @@ module RoB #(
 
 
                 // debug, print commit info
-                
+                /*
                 commit_num <= commit_num + 1;
-                if (commit_num <= 1) begin
+                if (commit_num <= 10000) begin
                     debug_en <= 1;
                     debug_commit_id <= commit_num;
                     file = $fopen("RoB_debug.txt", "a");
@@ -349,7 +349,7 @@ module RoB #(
                     end
                     $fclose(file);
                 end
-                
+                */
             end
         end
     end
