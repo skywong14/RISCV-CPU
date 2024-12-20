@@ -67,6 +67,8 @@ module Dispatcher #(
 
     output wire new_instruction_able,
 
+    input wire [2 : 0] new_ins_width, // 2 or 4
+
     // with RS
     output reg RS_newEntry_en,
     output reg [RoB_WIDTH - 1 : 0] RS_robEntry,
@@ -112,6 +114,7 @@ module Dispatcher #(
     output reg RoB_predict_result,
     output reg RoB_already_ready,
     output reg [31 : 0] RoB_ready_data,
+    output reg [2 : 0] RoB_ins_width,
 
     output wire [RoB_WIDTH : 0] query_Qj_RoBEntry,
     input wire query_Qj_RoBEntry_isReady,
@@ -174,6 +177,7 @@ module Dispatcher #(
                 // issue new instruction
                 RF_newEntry_robIndex <= RoB_newEntryIndex;
                 RF_occupied_rd <= new_rd;
+                RoB_ins_width <= new_ins_width;
                 case (new_opcode)
                     lui: begin
                         // RF
@@ -187,7 +191,7 @@ module Dispatcher #(
                         RoB_opcode <= lui;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     auipc: begin
@@ -202,7 +206,7 @@ module Dispatcher #(
                         RoB_opcode <= auipc;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     jal: begin
@@ -211,7 +215,7 @@ module Dispatcher #(
 
                         // RoB
                         RoB_already_ready <= 1;
-                        RoB_ready_data <= new_pc + 4;
+                        RoB_ready_data <= new_pc + new_ins_width;
 
                         RoB_newEntry_en <= 1;
                         RoB_opcode <= jal;
@@ -247,7 +251,7 @@ module Dispatcher #(
                         RoB_opcode <= jalr;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     beq, bne, blt, bge, bltu, bgeu: begin
@@ -313,7 +317,7 @@ module Dispatcher #(
                         RoB_opcode <= new_opcode;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     sb, sh, sw: begin
@@ -349,7 +353,7 @@ module Dispatcher #(
                         RoB_opcode <= new_opcode;
                         RoB_rd <= 0;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     addi, slti, sltiu, xori, ori, andi, slli, srli, srai: begin
@@ -379,7 +383,7 @@ module Dispatcher #(
                         RoB_opcode <= new_opcode;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                     add, sub, sll, slt, sltu, xorr, srl, sra, orr, andr: begin
@@ -414,7 +418,7 @@ module Dispatcher #(
                         RoB_opcode <= new_opcode;
                         RoB_rd <= new_rd;
                         RoB_pc <= new_pc;
-                        RoB_next_pc <= new_pc + 4;
+                        RoB_next_pc <= new_pc + new_ins_width;
                         RoB_predict_result <= 0;
                     end
                 endcase

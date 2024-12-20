@@ -66,6 +66,7 @@ module RoB #(
     input wire [4 : 0] new_entry_rd, // if rd == 0, means NON_DEP
     input wire [31 : 0] new_entry_pc,
     input wire [31 : 0] new_entry_next_pc,
+    input wire [2 : 0] new_ins_width,
     input wire new_entry_predict_result,
     input wire already_ready,
     input wire [31 : 0] ready_data,
@@ -119,7 +120,7 @@ module RoB #(
 /* opType:  
  * REGISTER (save data to rd)
  * BRANCH (data equals 0: not jump/ 1: jump, if predict_result != data, then FLUSH)
- * JALR (rd <= pc + 4, pc <= (Vj + imm) & ~1, i.e. data)
+ * JALR (rd <= pc + ins_width, pc <= (Vj + imm) & ~1, i.e. data)
  * STORE (save data to memory, addr is saved in rd, extra_data is used to store length)
  * JAL will be transformed to REGISTER in Dispatcher
  */
@@ -133,6 +134,7 @@ module RoB #(
     reg predict_result[RoB_SIZE - 1 : 0];
     reg [31 : 0] data[RoB_SIZE : 0];
     reg [31 : 0] extra_data[RoB_SIZE - 1 : 0];
+    reg [2 : 0] ins_width[RoB_SIZE - 1 : 0];
 
     integer i, j;
 
@@ -148,90 +150,7 @@ module RoB #(
     assign query_Qk_data = data[query_Qk_index];
 
     // for debug
-    /*
-    wire [2 : 0] debug_0_opType;
-    wire [31 : 0] debug_0_data;
-    wire [31 : 0] debug_0_extra_data;
-    wire [31 : 0] debug_0_pc;
-    wire [31 : 0] debug_0_next_pc;
-    wire [31 : 0] debug_0_predict_result;
-    wire [6 : 0] debug_0_opcode;
-    wire [31 : 0] debug_0_rd;
-    wire debug_0_isReady;
-    wire debug_0_isBusy;
-    assign debug_0_opType = opType[0];
-    assign debug_0_data = data[0];
-    assign debug_0_extra_data = extra_data[0];
-    assign debug_0_pc = pc[0];
-    assign debug_0_next_pc = next_pc[0];
-    assign debug_0_predict_result = predict_result[0];
-    assign debug_0_opcode = opcode[0];
-    assign debug_0_rd = rd[0];
-    assign debug_0_isBusy = isBusy[0];
-    assign debug_0_isReady = isReady[0];
-    wire [2 : 0] debug_1_opType;
-    wire [31 : 0] debug_1_data;
-    wire [31 : 0] debug_1_extra_data;
-    wire [31 : 0] debug_1_pc;
-    wire [31 : 0] debug_1_next_pc;
-    wire [31 : 0] debug_1_predict_result;
-    wire [6 : 0] debug_1_opcode;
-    wire [31 : 0] debug_1_rd;
-    wire debug_1_isReady;
-    wire debug_1_isBusy;
-    assign debug_1_opType = opType[1];
-    assign debug_1_data = data[1];
-    assign debug_1_extra_data = extra_data[1];
-    assign debug_1_pc = pc[1];
-    assign debug_1_next_pc = next_pc[1];
-    assign debug_1_predict_result = predict_result[1];
-    assign debug_1_opcode = opcode[1];
-    assign debug_1_rd = rd[1];
-    assign debug_1_isBusy = isBusy[1];
-    assign debug_1_isReady = isReady[1];
-    wire [2 : 0] debug_2_opType;
-    wire [31 : 0] debug_2_data;
-    wire [31 : 0] debug_2_extra_data;
-    wire [31 : 0] debug_2_pc;
-    wire [31 : 0] debug_2_next_pc;
-    wire [31 : 0] debug_2_predict_result;
-    wire [6 : 0] debug_2_opcode;
-    wire [31 : 0] debug_2_rd;
-    wire debug_2_isReady;
-    wire debug_2_isBusy;
-    assign debug_2_opType = opType[2];
-    assign debug_2_data = data[2];
-    assign debug_2_extra_data = extra_data[2];
-    assign debug_2_pc = pc[2];
-    assign debug_2_next_pc = next_pc[2];
-    assign debug_2_predict_result = predict_result[2];
-    assign debug_2_opcode = opcode[2];
-    assign debug_2_rd = rd[2];
-    assign debug_2_isBusy = isBusy[2];
-    assign debug_2_isReady = isReady[2];
-    wire [2 : 0] debug_3_opType;
-    wire [31 : 0] debug_3_data;
-    wire [31 : 0] debug_3_extra_data;
-    wire [31 : 0] debug_3_pc;
-    wire [31 : 0] debug_3_next_pc;
-    wire [31 : 0] debug_3_predict_result;
-    wire [6 : 0] debug_3_opcode;
-    wire [31 : 0] debug_3_rd;
-    wire debug_3_isReady;
-    wire debug_3_isBusy;
-    assign debug_3_opType = opType[3];
-    assign debug_3_data = data[3];
-    assign debug_3_extra_data = extra_data[3];
-    assign debug_3_pc = pc[3];
-    assign debug_3_next_pc = next_pc[3];
-    assign debug_3_predict_result = predict_result[3];
-    assign debug_3_opcode = opcode[3];
-    assign debug_3_rd = rd[3];
-    assign debug_3_isBusy = isBusy[3];
-    assign debug_3_isReady = isReady[3];
-    */
     integer commit_num, file;
-    // three things to do: 1. get new entry 2. update RoB 3. try to commit head entry
     always @(posedge clk_in) begin
         if (rst_in) begin
             // reset
@@ -262,6 +181,7 @@ module RoB #(
                 data[i] <= 0;
                 extra_data[i] <= 0;
                 opcode[i] <= 0;
+                ins_width[i] <= 0;
             end
         end
         else if (!rdy_in) begin
@@ -316,6 +236,7 @@ module RoB #(
                 next_pc[tail_ptr] <= new_entry_next_pc;
                 predict_result[tail_ptr] <= new_entry_predict_result;
                 opcode[tail_ptr] <= new_entry_opcode;
+                ins_width[tail_ptr] <= new_ins_width;
                 case (new_entry_opcode)
                     jalr : begin
                         opType[tail_ptr] <= JALR;
@@ -367,7 +288,7 @@ module RoB #(
                                 correct_next_pc <= next_pc[head_ptr];
                             end
                             else begin
-                                correct_next_pc <= pc[head_ptr] + 4;
+                                correct_next_pc <= pc[head_ptr] + ins_width[head_ptr];
                             end
                         end 
                         // branch_predictor update
@@ -380,7 +301,7 @@ module RoB #(
                         RF_update_en <= 1;
                         RF_update_reg <= rd[head_ptr];
                         RF_update_index <= head_ptr;
-                        RF_update_data <= pc[head_ptr] + 4;
+                        RF_update_data <= pc[head_ptr] + ins_width[head_ptr];
                         // jump to next_pc
                         jalr_feedback_en <= 1;
                         jalr_feedback_data <= data[head_ptr]; // next_pc
@@ -406,9 +327,9 @@ module RoB #(
 
 
                 // debug, print commit info
-                /*
+                
                 commit_num <= commit_num + 1;
-                if (commit_num <= 3000) begin
+                if (commit_num <= 1) begin
                     debug_en <= 1;
                     debug_commit_id <= commit_num;
                     file = $fopen("RoB_debug.txt", "a");
@@ -424,11 +345,11 @@ module RoB #(
                             slt: $fdisplay(file, "slt"); sltu: $fdisplay(file, "sltu"); xorr: $fdisplay(file, "xorr"); srl: $fdisplay(file, "srl"); sra: $fdisplay(file, "sra"); orr: $fdisplay(file, "orr");
                             andr: $fdisplay(file, "andr"); default: $fdisplay(file, "unknown");
                         endcase
-                        $fdisplay(file, "{%d} opType = %d, data = %d, extra_data = %d, pc = 0x%h, next_pc = 0x%h, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d", j, opType[j], data[j], extra_data[j], pc[j], next_pc[j], predict_result[j], opcode[j], rd[j], isReady[j], isBusy[j]);
+                        $fdisplay(file, "{%d} opType = %d, data = %d, ins_width = %d, pc = 0x%h, next_pc = 0x%h, predict_result = %d, opcode = %d, rd = %d, isReady = %d, isBusy = %d", j, opType[j], data[j], ins_width[j], pc[j], next_pc[j], predict_result[j], opcode[j], rd[j], isReady[j], isBusy[j]);
                     end
                     $fclose(file);
                 end
-                */
+                
             end
         end
     end

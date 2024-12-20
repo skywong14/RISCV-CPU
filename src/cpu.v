@@ -110,6 +110,7 @@ wire [31 : 0] Dispatcher_RoB_pc;
 wire [31 : 0] Dispatcher_RoB_next_pc;
 wire Dispatcher_RoB_predict_result;
 wire Dispatcher_RoB_already_ready;
+wire [2 : 0] Dispatcher_RoB_ins_width;
 wire [31 : 0] Dispatcher_RoB_ready_data;
 
 wire [4 : 0] Dispatcher_RF_rs1;
@@ -134,6 +135,7 @@ wire [31 : 0] IF_new_imm;
 wire IF_new_predict_result;
 wire [31 : 0] IF_predict_query_pc;
 wire IF_branch_predictor_query_en;
+wire [2 : 0] IF_new_ins_width;
 
 // output by icache
 wire icache_MC_query_en;
@@ -180,6 +182,7 @@ RoB #(
   .new_entry_rd(Dispatcher_RoB_rd),
   .new_entry_pc(Dispatcher_RoB_pc),
   .new_entry_next_pc(Dispatcher_RoB_next_pc),
+  .new_ins_width(Dispatcher_RoB_ins_width),
   .new_entry_predict_result(Dispatcher_RoB_predict_result),
   .already_ready(Dispatcher_RoB_already_ready),
   .ready_data(Dispatcher_RoB_ready_data),
@@ -249,6 +252,7 @@ Dispatcher #(
   .new_imm(IF_new_imm),
   .new_predict_result(IF_new_predict_result),
   .new_instruction_able(Dispatcher_new_instruction_able),
+  .new_ins_width(IF_new_ins_width),
 
   .RS_newEntry_en(Dispatcher_RS_new_Entry_en),
   .RS_robEntry(Dispatcher_RS_robEntry),
@@ -289,6 +293,7 @@ Dispatcher #(
   .RoB_predict_result(Dispatcher_RoB_predict_result),
   .RoB_already_ready(Dispatcher_RoB_already_ready),
   .RoB_ready_data(Dispatcher_RoB_ready_data),
+  .RoB_ins_width(Dispatcher_RoB_ins_width),
   .query_Qj_RoBEntry(Dispatcher_query_Qj_RoBEntry),
   .query_Qj_RoBEntry_isReady(RoB_query_Qj_isReady),
   .query_Qj_RoBEntry_data(RoB_query_Qj_data),
@@ -332,6 +337,7 @@ Instruction_Fetcher #(
   .new_rd(IF_new_rd),
   .new_imm(IF_new_imm),
   .new_predict_result(IF_new_predict_result),
+  .new_ins_width(IF_new_ins_width),
   .branch_predictor_query_en(IF_branch_predictor_query_en),
   .predict_query_pc(IF_predict_query_pc),
   .predict_result(bp_result_out)
