@@ -169,30 +169,6 @@ module Reservation_Station #(
                 // idle_pos will be updated automatically
             end
 
-            // update self state from self commit
-            if (RoB_update_en) begin
-                for (i = 0; i < RS_SIZE; i = i + 1) begin
-                    if (isBusy[i]) begin
-                        Qj[i] <= (Qj[i] == RoB_update_index) ? NON_DEP : Qj[i];
-                        Qk[i] <= (Qk[i] == RoB_update_index) ? NON_DEP : Qk[i];
-                        Vj[i] <= (Qj[i] == NON_DEP) ? RoB_update_data : Vj[i];
-                        Vk[i] <= (Qk[i] == NON_DEP) ? RoB_update_data : Vk[i];
-                    end
-                end
-            end
-            // update self state from CDB commit
-            if (CDB_update_en) begin
-                // monitor CDB, update Qj, Qk, Vj, Vk
-                for (i = 0; i < RS_SIZE; i = i + 1) begin
-                    if (isBusy[i]) begin
-                        Qj[i] <= (Qj[i] == CDB_update_index) ? NON_DEP : Qj[i];
-                        Qk[i] <= (Qk[i] == CDB_update_index) ? NON_DEP : Qk[i];
-                        Vj[i] <= (Qj[i] == NON_DEP) ? CDB_update_data : Vj[i];
-                        Vk[i] <= (Qk[i] == NON_DEP) ? CDB_update_data : Vk[i];
-                    end
-                end
-            end
-
             // calc a ready entry, commit, clear
             if (ready_pos != (1 << RS_WIDTH)) begin
                 RoB_update_en <= 1;
@@ -241,4 +217,41 @@ module Reservation_Station #(
             end
         end
     end
+
+    always @(posedge clk_in) begin
+        if (!rst_in && rdy_in && !flush_signal) begin
+            // update self state from self commit
+            if (RoB_update_en) begin
+                for (i = 0; i < RS_SIZE; i = i + 1) begin
+                    if (isBusy[i]) begin
+                        if (Qj[i] == RoB_update_index) begin
+                            Qj[i] <= NON_DEP;
+                            Vj[i] <= RoB_update_data;
+                        end
+                        if (Qk[i] == RoB_update_index) begin
+                            Qk[i] <= NON_DEP;
+                            Vk[i] <= RoB_update_data;
+                        end
+                    end
+                end
+            end
+            // update self state from CDB commit
+            if (CDB_update_en) begin
+                // monitor CDB, update Qj, Qk, Vj, Vk
+                for (i = 0; i < RS_SIZE; i = i + 1) begin
+                    if (isBusy[i]) begin
+                        if (Qj[i] == CDB_update_index) begin
+                            Qj[i] <= NON_DEP;
+                            Vj[i] <= CDB_update_data;
+                        end
+                        if (Qk[i] == CDB_update_index) begin
+                            Qk[i] <= NON_DEP;
+                            Vk[i] <= CDB_update_data;
+                        end
+                    end
+                end
+            end
+        end
+    end    
+
 endmodule
