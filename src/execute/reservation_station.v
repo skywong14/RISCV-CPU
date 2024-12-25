@@ -173,29 +173,22 @@ module Reservation_Station #(
             if (RoB_update_en) begin
                 for (i = 0; i < RS_SIZE; i = i + 1) begin
                     if (isBusy[i]) begin
-                        if (Qj[i] == RoB_update_index) begin
-                            Qj[i] <= NON_DEP;
-                            Vj[i] <= RoB_update_data;
-                        end
-                        if (Qk[i] == RoB_update_index) begin
-                            Qk[i] <= NON_DEP;
-                            Vk[i] <= RoB_update_data;
-                        end
+                        Qj[i] <= (Qj[i] == RoB_update_index) ? NON_DEP : Qj[i];
+                        Qk[i] <= (Qk[i] == RoB_update_index) ? NON_DEP : Qk[i];
+                        Vj[i] <= (Qj[i] == NON_DEP) ? RoB_update_data : Vj[i];
+                        Vk[i] <= (Qk[i] == NON_DEP) ? RoB_update_data : Vk[i];
                     end
                 end
             end
+            // update self state from CDB commit
             if (CDB_update_en) begin
                 // monitor CDB, update Qj, Qk, Vj, Vk
                 for (i = 0; i < RS_SIZE; i = i + 1) begin
                     if (isBusy[i]) begin
-                        if (Qj[i] == CDB_update_index) begin
-                            Qj[i] <= NON_DEP;
-                            Vj[i] <= CDB_update_data;
-                        end
-                        if (Qk[i] == CDB_update_index) begin
-                            Qk[i] <= NON_DEP;
-                            Vk[i] <= CDB_update_data;
-                        end
+                        Qj[i] <= (Qj[i] == CDB_update_index) ? NON_DEP : Qj[i];
+                        Qk[i] <= (Qk[i] == CDB_update_index) ? NON_DEP : Qk[i];
+                        Vj[i] <= (Qj[i] == NON_DEP) ? CDB_update_data : Vj[i];
+                        Vk[i] <= (Qk[i] == NON_DEP) ? CDB_update_data : Vk[i];
                     end
                 end
             end
@@ -248,9 +241,4 @@ module Reservation_Station #(
             end
         end
     end
-
-
-
-
-
 endmodule
