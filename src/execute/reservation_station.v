@@ -104,6 +104,13 @@ module Reservation_Station #(
             (isReady[8]) ? 8 : (isReady[9]) ? 9 : (isReady[10]) ? 10 : (isReady[11]) ? 11 : (isReady[12]) ? 12 :
             (isReady[13]) ? 13 : (isReady[14]) ? 14 : (isReady[15]) ? 15 : 16;    
 
+    // assign idle_pos = (!isBusy[0]) ? 0 : (!isBusy[1]) ? 1 : (!isBusy[2]) ? 2 : (!isBusy[3]) ? 3 : (!isBusy[4]) ? 4 : 
+    //         (!isBusy[5]) ? 5 : (!isBusy[6]) ? 6 : (!isBusy[7]) ? 7 : 8;
+    // assign busy_pos = (isBusy[0]) ? 0 : (isBusy[1]) ? 1 : (isBusy[2]) ? 2 : (isBusy[3]) ? 3 : (isBusy[4]) ? 4 :
+    //         (isBusy[5]) ? 5 : (isBusy[6]) ? 6 : (isBusy[7]) ? 7 : 8;
+    // assign ready_pos = (isReady[0]) ? 0 : (isReady[1]) ? 1 : (isReady[2]) ? 2 : (isReady[3]) ? 3 : (isReady[4]) ? 4 :
+    //         (isReady[5]) ? 5 : (isReady[6]) ? 6 : (isReady[7]) ? 7 : 8;
+
     
     assign isFull = (idle_pos == (1 << RS_WIDTH));
     assign isEmpty = (busy_pos == (1 << RS_WIDTH));
@@ -117,6 +124,10 @@ module Reservation_Station #(
     endgenerate
 
     integer i;
+
+    wire new_entry_Qj_en, new_entry_Qk_en;
+    assign new_entry_Qj_en = (new_entry_Qj != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qj);
+    assign new_entry_Qk_en = (new_entry_Qk != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qk);
 
     always @(posedge clk_in) begin
         if (rst_in) begin
@@ -157,10 +168,10 @@ module Reservation_Station #(
             if (!isFull && new_entry_en) begin
                 // get new entry
                 opcode[idle_pos] <= new_entry_opcode;
-                Qj[idle_pos] <= (new_entry_Qj != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qj) ? NON_DEP : new_entry_Qj;
-                Vj[idle_pos] <= (new_entry_Qj != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qj) ? RoB_update_data : new_entry_Vj;
-                Qk[idle_pos] <= (new_entry_Qk != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qk) ? NON_DEP : new_entry_Qk;
-                Vk[idle_pos] <= (new_entry_Qk != NON_DEP && RoB_update_en && RoB_update_index == new_entry_Qk) ? RoB_update_data : new_entry_Vk;
+                Qj[idle_pos] <= (new_entry_Qj_en) ? NON_DEP : new_entry_Qj;
+                Vj[idle_pos] <= (new_entry_Qj_en) ? RoB_update_data : new_entry_Vj;
+                Qk[idle_pos] <= (new_entry_Qk_en) ? NON_DEP : new_entry_Qk;
+                Vk[idle_pos] <= (new_entry_Qk_en) ? RoB_update_data : new_entry_Vk;
 
                 imm[idle_pos] <= new_entry_imm;
                 robEntry[idle_pos] <= new_entry_robEntry;
@@ -169,6 +180,23 @@ module Reservation_Station #(
                 // idle_pos will be updated automatically
             end
 
+            // update self state
+            for (i = 0; i < RS_SIZE; i = i + 1) begin
+                if (isBusy[i]) begin
+                    Qj[i] <= (RoB_update_en && Qj[i] == RoB_update_index) ? NON_DEP :
+                             (CDB_update_en && Qj[i] == CDB_update_index) ? NON_DEP :
+                                Qj[i];
+                    Qk[i] <= (RoB_update_en && Qk[i] == RoB_update_index) ? NON_DEP :   
+                             (CDB_update_en && Qk[i] == CDB_update_index) ? NON_DEP :
+                                Qk[i];
+                    Vj[i] <= (RoB_update_en && Qj[i] == RoB_update_index) ? RoB_update_data :
+                             (CDB_update_en && Qj[i] == CDB_update_index) ? CDB_update_data :
+                                Vj[i];
+                    Vk[i] <= (RoB_update_en && Qk[i] == RoB_update_index) ? RoB_update_data :
+                            (CDB_update_en && Qk[i] == CDB_update_index) ? CDB_update_data :
+                                Vk[i];
+                end
+            end                
             // calc a ready entry, commit, clear
             if (ready_pos != (1 << RS_WIDTH)) begin
                 RoB_update_en <= 1;
@@ -217,41 +245,4 @@ module Reservation_Station #(
             end
         end
     end
-
-    always @(posedge clk_in) begin
-        if (!rst_in && rdy_in && !flush_signal) begin
-            // update self state from self commit
-            if (RoB_update_en) begin
-                for (i = 0; i < RS_SIZE; i = i + 1) begin
-                    if (isBusy[i]) begin
-                        if (Qj[i] == RoB_update_index) begin
-                            Qj[i] <= NON_DEP;
-                            Vj[i] <= RoB_update_data;
-                        end
-                        if (Qk[i] == RoB_update_index) begin
-                            Qk[i] <= NON_DEP;
-                            Vk[i] <= RoB_update_data;
-                        end
-                    end
-                end
-            end
-            // update self state from CDB commit
-            if (CDB_update_en) begin
-                // monitor CDB, update Qj, Qk, Vj, Vk
-                for (i = 0; i < RS_SIZE; i = i + 1) begin
-                    if (isBusy[i]) begin
-                        if (Qj[i] == CDB_update_index) begin
-                            Qj[i] <= NON_DEP;
-                            Vj[i] <= CDB_update_data;
-                        end
-                        if (Qk[i] == CDB_update_index) begin
-                            Qk[i] <= NON_DEP;
-                            Vk[i] <= CDB_update_data;
-                        end
-                    end
-                end
-            end
-        end
-    end    
-
 endmodule

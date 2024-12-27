@@ -273,7 +273,8 @@ module LSB #(
 
             if (state == NORMAL) begin
                 // try to commit
-                if (isBusy[head_ptr] && isReady[head_ptr] && op_type[head_ptr] == 0) begin
+                if (isBusy[head_ptr] && isReady[head_ptr] && op_type[head_ptr] == 0 
+                && (RoB_headIndex == RoBEntry[head_ptr] || (Vj[head_ptr] + imm[head_ptr] != 32'h30000 && Vj[head_ptr] + imm[head_ptr] != 32'h30004))) begin
                     // LOAD before the first STORE
                     // load: load [rs1 + imm] to #RoBIndex(rd)
                     state <= WAITING_RESULT;
