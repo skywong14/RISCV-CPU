@@ -122,7 +122,9 @@ module Instruction_Fetcher #(
     // with Branch_Predictor
     output reg branch_predictor_query_en,
     output reg [31 : 0] predict_query_pc,
-    input wire predict_result // 0: not jump, 1: jump
+    input wire predict_result, // 0: not jump, 1: jump
+
+    output wire [14 : 0] cur_pc
 );
     reg [1 : 0] state;
 
@@ -142,6 +144,9 @@ module Instruction_Fetcher #(
     wire [4 : 0] c_rs1;
     wire [4 : 0] c_rs2;
     wire [4 : 0] c_rd;
+
+    assign cur_pc = pc;
+
     CType_Decoder module_CType_Decoder (
         .instruction(cur_instruction[15 : 0]),
         .opcode_ctype(opcode_ctype),
@@ -182,7 +187,8 @@ module Instruction_Fetcher #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end 
+        else if (flush_signal) begin
             // flush
             state <= IDLE;
             pc <= correct_next_pc;

@@ -157,7 +157,8 @@ module Dispatcher #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (RoB_flush_signal) begin
+        end 
+        else if (RoB_flush_signal) begin
             // flush
             RF_newEntry_en <= 0;
             RS_newEntry_en <= 0;

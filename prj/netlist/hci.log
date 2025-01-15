@@ -1,0 +1,1 @@
+{workspace}/src/hci.v:203: ERROR: System task `$finish' outside initial block is unsupported.

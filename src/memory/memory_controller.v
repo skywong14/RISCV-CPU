@@ -77,7 +77,8 @@ module Memory_Controller #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end 
+        else if (flush_signal) begin
             // flush
             state <= IDLE;
             last_module <= 0;

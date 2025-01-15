@@ -61,7 +61,8 @@ module ICache #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end 
+        else if (flush_signal) begin
             // flush
             state <= IDLE;
             IF_dout_en <= 0;

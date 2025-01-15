@@ -18,6 +18,7 @@ module cpu #(
 	
 	input  wire                 io_buffer_full, // 1 if uart buffer is full, this signal will be sent to memory_controller
 	
+  output wire [14 : 0]       debug_info,				// my debug info
 	output wire [31:0]			dbgreg_dout		// cpu register output (debugging demo)
 );
 
@@ -136,6 +137,9 @@ wire IF_new_predict_result;
 wire [31 : 0] IF_predict_query_pc;
 wire IF_branch_predictor_query_en;
 wire [2 : 0] IF_new_ins_width;
+
+wire [14 : 0] IF_pc_debug;
+assign debug_info = IF_pc_debug;
 
 // output by icache
 wire icache_MC_query_en;
@@ -341,7 +345,9 @@ Instruction_Fetcher #(
   .new_ins_width(IF_new_ins_width),
   .branch_predictor_query_en(IF_branch_predictor_query_en),
   .predict_query_pc(IF_predict_query_pc),
-  .predict_result(bp_result_out)
+  .predict_result(bp_result_out),
+
+  .cur_pc(IF_pc_debug)
 );
 
 ICache #(

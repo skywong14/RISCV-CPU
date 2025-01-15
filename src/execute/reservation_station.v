@@ -147,7 +147,8 @@ module Reservation_Station #(
         end
         else if (!rdy_in) begin
             // pause
-        end if (flush_signal) begin
+        end
+        else if (flush_signal) begin
             // flush
             RoB_update_en <= 0;
             for (i = 0; i < RS_SIZE; i = i + 1) begin
